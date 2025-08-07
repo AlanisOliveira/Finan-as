@@ -902,6 +902,96 @@
         .text-warning { color: var(--warning); }
         .text-muted { color: var(--text-secondary); }
 
+        /* GOALS SYSTEM */
+        .form-inline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 15px;
+        }
+        
+        .form-inline .form-group {
+            margin-right: 0;
+            min-width: 120px;
+        }
+        
+        .form-inline .form-group label {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .goal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .goal-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        
+        .goal-info p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .goal-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .goal-progress-bar {
+            width: 100px;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .goal-progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s ease;
+        }
+        
+        .goal-progress-fill.warning {
+            background: var(--warning);
+        }
+        
+        .goal-progress-fill.danger {
+            background: var(--danger);
+        }
+        
+        .goal-status {
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .goal-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .goal-actions .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            min-width: auto;
+        }
+
         .mb-0 { margin-bottom: 0; }
         .mb-1 { margin-bottom: 10px; }
         .mb-2 { margin-bottom: 20px; }
@@ -988,6 +1078,16 @@
                     <div class="dashboard-value dividas" id="totalDividas">R$ 0,00</div>
                     <div class="dashboard-subtitle">Valores em aberto</div>
                 </div>
+            </div>
+
+            <!-- ADVANCED DASHBOARD -->
+            <div class="dashboard-advanced">
+                <div class="dashboard-card metas">
+                    <div class="dashboard-title">🎯 Metas do Mês</div>
+                    <div class="dashboard-value" id="metaProgress">0%</div>
+                    <div class="dashboard-subtitle" id="metaSubtitle">Sem metas definidas</div>
+                </div>
+                
             </div>
 
             <!-- FORM SECTION -->
@@ -1219,6 +1319,45 @@
                 </div>
             </div>
 
+            <!-- GOALS/METAS SYSTEM -->
+            <div class="section">
+                <h3 class="section-title">🎯 Sistema de Metas</h3>
+                
+                <!-- Goals Form -->
+                <div class="goals-form-container" style="margin-bottom: 20px;">
+                    <form id="goalsForm" class="form-inline">
+                        <div class="form-group" style="margin-right: 15px;">
+                            <label for="metaNome">Nome da Meta</label>
+                            <input type="text" id="metaNome" placeholder="Ex: Emergência, Viagem" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-right: 15px;">
+                            <label for="metaBanco">Banco/Conta</label>
+                            <select id="metaBanco" required>
+                                <option value="">Selecione o banco</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-right: 15px;">
+                            <label for="metaValorDesejado">Valor Desejado</label>
+                            <input type="number" id="metaValorDesejado" step="0.01" min="0" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-right: 15px;">
+                            <label for="metaValorAtual">Valor Atual</label>
+                            <input type="number" id="metaValorAtual" step="0.01" min="0" value="0">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">➕ Adicionar Meta</button>
+                    </form>
+                </div>
+                
+                <!-- Active Goals List -->
+                <div id="activeGoals">
+                    <p class="text-muted">Nenhuma meta definida</p>
+                </div>
+            </div>
+
             <!-- RECENT PEOPLE -->
             <div class="section">
                 <h3 class="section-title">👥 Pessoas Recentes</h3>
@@ -1403,6 +1542,10 @@
                     this.data.transactions = {};
                 }
 
+                if (!this.data.goals) {
+                    this.data.goals = [];
+                }
+
                 this.populateSelects();
                 this.populateGastoParaSelect();
                 this.saveData();
@@ -1432,6 +1575,13 @@
                         this.addTransaction();
                     }
                 });
+
+                // Goals form
+                document.getElementById('goalsForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addGoal();
+                });
+
 
                 // Compartilhada checkbox
                 document.getElementById('compartilhada').addEventListener('change', (e) => {
@@ -2313,6 +2463,7 @@
                 this.updateStats();
                 this.updateRecentPeople();
                 this.updateGastosPorPessoa();
+                this.updateGoalsDisplay();
             }
 
             updateDashboard() {
@@ -2339,6 +2490,334 @@
                 // Update saldo color
                 const saldoEl = document.getElementById('saldoTotal');
                 saldoEl.className = `dashboard-value ${saldo >= 0 ? 'entradas' : 'saidas'}`;
+                
+                // Update advanced dashboard
+                this.updateAdvancedDashboard();
+            }
+
+            updateAdvancedDashboard() {
+                // Update Metas card
+                this.updateMetasCard();
+                
+                // Update Comparativo card 
+                this.updateComparativoCard();
+                
+                // Update Tendência card
+                this.updateTendenciaCard();
+                
+                // Update Eficiência card
+                this.updateEficienciaCard();
+            }
+
+            updateMetasCard() {
+                const metaProgress = document.getElementById('metaProgress');
+                const metaSubtitle = document.getElementById('metaSubtitle');
+                
+                if (!this.data.goals || this.data.goals.length === 0) {
+                    metaProgress.textContent = '0%';
+                    metaSubtitle.textContent = 'Sem metas definidas';
+                    metaProgress.className = 'dashboard-value';
+                    return;
+                }
+
+                // Calculate overall progress from all active goals
+                const activeGoals = this.data.goals.filter(g => g.active);
+                
+                if (activeGoals.length === 0) {
+                    metaProgress.textContent = '0%';
+                    metaSubtitle.textContent = 'Sem metas ativas';
+                    metaProgress.className = 'dashboard-value';
+                    return;
+                }
+
+                let totalProgress = 0;
+                let exceededGoals = 0;
+                
+                activeGoals.forEach(goal => {
+                    const progress = this.calculateGoalProgress(goal);
+                    totalProgress += progress.percentage;
+                    if (progress.percentage >= 100) exceededGoals++;
+                });
+
+                const avgProgress = totalProgress / activeGoals.length;
+                
+                metaProgress.textContent = `${avgProgress.toFixed(0)}%`;
+                
+                if (exceededGoals > 0) {
+                    metaProgress.className = 'dashboard-value saidas';
+                    metaSubtitle.textContent = `${exceededGoals} meta(s) excedida(s)`;
+                } else if (avgProgress >= 80) {
+                    metaProgress.className = 'dashboard-value dividas';
+                    metaSubtitle.textContent = `${activeGoals.length} meta(s) ativas`;
+                } else {
+                    metaProgress.className = 'dashboard-value entradas';
+                    metaSubtitle.textContent = `${activeGoals.length} meta(s) ativas`;
+                }
+            }
+
+            updateComparativoCard() {
+                const current = this.getCurrentTransactions();
+                const currentSaidas = current
+                    .filter(t => t.tipo === 'Saída')
+                    .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                
+                // Get previous month data
+                const prevMonth = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+                const prevTransactions = this.data.transactions.filter(t => {
+                    const transDate = new Date(t.data);
+                    return transDate.getFullYear() === prevMonth.getFullYear() && 
+                           transDate.getMonth() === prevMonth.getMonth();
+                });
+                
+                const prevSaidas = prevTransactions
+                    .filter(t => t.tipo === 'Saída')
+                    .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                
+                const comparativoValue = document.getElementById('comparativoValue');
+                const comparativoSubtitle = document.getElementById('comparativoSubtitle');
+                
+                if (prevSaidas === 0) {
+                    comparativoValue.textContent = '-';
+                    comparativoSubtitle.textContent = 'Mês anterior sem dados';
+                    comparativoValue.className = 'dashboard-value';
+                } else {
+                    const diff = currentSaidas - prevSaidas;
+                    const percent = ((diff / prevSaidas) * 100);
+                    
+                    if (diff > 0) {
+                        comparativoValue.textContent = `+${percent.toFixed(1)}%`;
+                        comparativoValue.className = 'dashboard-value saidas';
+                        comparativoSubtitle.textContent = `+${this.formatCurrency(diff)} vs. anterior`;
+                    } else if (diff < 0) {
+                        comparativoValue.textContent = `${percent.toFixed(1)}%`;
+                        comparativoValue.className = 'dashboard-value entradas';
+                        comparativoSubtitle.textContent = `${this.formatCurrency(diff)} vs. anterior`;
+                    } else {
+                        comparativoValue.textContent = '0%';
+                        comparativoValue.className = 'dashboard-value';
+                        comparativoSubtitle.textContent = 'Mesmo que o anterior';
+                    }
+                }
+            }
+
+            updateTendenciaCard() {
+                const tendenciaValue = document.getElementById('tendenciaValue');
+                const tendenciaSubtitle = document.getElementById('tendenciaSubtitle');
+                
+                // Calculate last 3 months average
+                const months = [];
+                for (let i = 0; i < 3; i++) {
+                    const monthDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - i, 1);
+                    const monthTransactions = this.data.transactions.filter(t => {
+                        const transDate = new Date(t.data);
+                        return transDate.getFullYear() === monthDate.getFullYear() && 
+                               transDate.getMonth() === monthDate.getMonth();
+                    });
+                    
+                    const monthSaidas = monthTransactions
+                        .filter(t => t.tipo === 'Saída')
+                        .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                    
+                    months.push(monthSaidas);
+                }
+                
+                if (months.length < 2) {
+                    tendenciaValue.textContent = '-';
+                    tendenciaSubtitle.textContent = 'Dados insuficientes';
+                    tendenciaValue.className = 'dashboard-value';
+                } else {
+                    // Simple trend calculation
+                    const recent = months.slice(0, 2).reduce((a, b) => a + b) / 2;
+                    const older = months.slice(1, 3).reduce((a, b) => a + b) / 2;
+                    
+                    if (older === 0) {
+                        tendenciaValue.textContent = '-';
+                        tendenciaSubtitle.textContent = 'Base insuficiente';
+                        tendenciaValue.className = 'dashboard-value';
+                    } else {
+                        const trend = ((recent - older) / older) * 100;
+                        
+                        if (trend > 5) {
+                            tendenciaValue.textContent = '↗️ Alta';
+                            tendenciaValue.className = 'dashboard-value saidas';
+                            tendenciaSubtitle.textContent = `+${trend.toFixed(1)}% tendência`;
+                        } else if (trend < -5) {
+                            tendenciaValue.textContent = '↘️ Baixa';
+                            tendenciaValue.className = 'dashboard-value entradas';
+                            tendenciaSubtitle.textContent = `${trend.toFixed(1)}% tendência`;
+                        } else {
+                            tendenciaValue.textContent = '➡️ Estável';
+                            tendenciaValue.className = 'dashboard-value';
+                            tendenciaSubtitle.textContent = 'Variação baixa';
+                        }
+                    }
+                }
+            }
+
+            updateEficienciaCard() {
+                const eficienciaValue = document.getElementById('eficienciaValue');
+                const eficienciaSubtitle = document.getElementById('eficienciaSubtitle');
+                
+                // For now, show a placeholder for budget system
+                eficienciaValue.textContent = '-';
+                eficienciaSubtitle.textContent = 'Sistema de orçamento em breve';
+                eficienciaValue.className = 'dashboard-value';
+            }
+
+            // GOALS SYSTEM METHODS
+            addGoal() {
+                const nome = document.getElementById('metaNome').value.trim();
+                const banco = document.getElementById('metaBanco').value;
+                const valorDesejado = parseFloat(document.getElementById('metaValorDesejado').value);
+                const valorAtual = parseFloat(document.getElementById('metaValorAtual').value) || 0;
+
+                if (!nome || !banco || !valorDesejado || valorDesejado <= 0) {
+                    this.showNotification('Preencha todos os campos obrigatórios corretamente.', 'error');
+                    return;
+                }
+
+                if (valorAtual > valorDesejado) {
+                    this.showNotification('Valor atual não pode ser maior que o valor desejado.', 'error');
+                    return;
+                }
+
+                const goal = {
+                    id: Date.now().toString(),
+                    nome: nome,
+                    banco: banco,
+                    valorDesejado: valorDesejado,
+                    valorAtual: valorAtual,
+                    createdAt: new Date().toISOString(),
+                    active: true
+                };
+
+                this.data.goals.push(goal);
+                this.saveData();
+                this.updateGoalsDisplay();
+                this.updateMetasCard();
+                this.updateDashboard(); // Update main dashboard to reflect reserved amounts
+                
+                document.getElementById('goalsForm').reset();
+                this.showNotification('Meta adicionada com sucesso!', 'success');
+            }
+
+            removeGoal(goalId) {
+                if (!confirm('Tem certeza que deseja remover esta meta?')) return;
+                
+                this.data.goals = this.data.goals.filter(goal => goal.id !== goalId);
+                this.saveData();
+                this.updateGoalsDisplay();
+                this.updateMetasCard();
+                this.updateDashboard(); // Update main dashboard
+                
+                this.showNotification('Meta removida!', 'warning');
+            }
+
+            updateGoalProgress(goalId, newValorAtual) {
+                const goal = this.data.goals.find(g => g.id === goalId);
+                if (goal) {
+                    goal.valorAtual = parseFloat(newValorAtual);
+                    this.saveData();
+                    this.updateGoalsDisplay();
+                    this.updateMetasCard();
+                    this.updateDashboard();
+                }
+            }
+
+            updateGoalsDisplay() {
+                const container = document.getElementById('activeGoals');
+                
+                if (!this.data.goals || this.data.goals.length === 0) {
+                    container.innerHTML = '<p class="text-muted">Nenhuma meta definida</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                
+                this.data.goals.forEach(goal => {
+                    if (!goal.active) return;
+                    
+                    const progressPercent = (goal.valorAtual / goal.valorDesejado) * 100;
+                    const remaining = goal.valorDesejado - goal.valorAtual;
+                    const progressClass = progressPercent >= 100 ? 'success' : progressPercent >= 80 ? 'warning' : '';
+                    
+                    const goalCard = document.createElement('div');
+                    goalCard.className = 'goal-card';
+                    
+                    const bancoInfo = this.data.banks.find(b => b.id === goal.banco);
+                    const bancoNome = bancoInfo ? bancoInfo.name : goal.banco;
+                    
+                    goalCard.innerHTML = `
+                        <div class="goal-info">
+                            <h4>🎯 ${goal.nome}</h4>
+                            <p>${bancoNome} | Meta: ${this.formatCurrency(goal.valorDesejado)} | Falta: ${this.formatCurrency(remaining)}</p>
+                        </div>
+                        <div class="goal-progress">
+                            <div class="goal-progress-bar">
+                                <div class="goal-progress-fill ${progressClass}" style="width: ${Math.min(progressPercent, 100)}%"></div>
+                            </div>
+                            <div class="goal-status ${progressClass ? 'text-' + (progressClass === 'success' ? 'success' : 'warning') : 'text-muted'}">
+                                ${progressPercent.toFixed(0)}%
+                            </div>
+                        </div>
+                        <div class="goal-actions">
+                            <input type="number" style="width: 100px; margin-right: 8px;" step="0.01" value="${goal.valorAtual}" onchange="app.updateGoalProgress('${goal.id}', this.value)" placeholder="Valor atual">
+                            <button class="btn btn-sm btn-danger" onclick="app.removeGoal('${goal.id}')">🗑️</button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(goalCard);
+                });
+            }
+
+            calculateGoalProgress(goal) {
+                const now = new Date();
+                let startDate, endDate;
+                
+                if (goal.periodo === 'mensal') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                } else { // anual
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear(), 11, 31);
+                }
+
+                const relevantTransactions = this.getTransactionsInPeriod(startDate, endDate)
+                    .filter(t => t.tipo === 'Saída');
+
+                let spent = 0;
+
+                if (goal.tipo === 'global') {
+                    spent = relevantTransactions.reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                } else if (goal.tipo === 'categoria') {
+                    spent = relevantTransactions
+                        .filter(t => t.categoria === goal.categoria)
+                        .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                } else if (goal.tipo === 'pessoa') {
+                    spent = relevantTransactions
+                        .filter(t => t.gastoPara === goal.pessoa)
+                        .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+                }
+
+                const percentage = (spent / goal.valor) * 100;
+                
+                return { spent, percentage };
+            }
+
+            getTransactionsInPeriod(startDate, endDate) {
+                const allTransactions = [];
+                
+                Object.keys(this.data.transactions).forEach(yearMonth => {
+                    const transactions = this.data.transactions[yearMonth] || [];
+                    transactions.forEach(transaction => {
+                        const transDate = new Date(transaction.data);
+                        if (transDate >= startDate && transDate <= endDate) {
+                            allTransactions.push(transaction);
+                        }
+                    });
+                });
+                
+                return allTransactions;
             }
 
             updateTransactionsTable() {
