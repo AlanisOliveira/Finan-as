@@ -1,0 +1,2958 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Financeiro Avançado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #7c3aed;
+            --primary-hover: #8b5cf6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e1e4e8;
+            --text-primary: #2e3338;
+            --text-secondary: #7c7c7c;
+            --border: #e1e4e8;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* LOADING STATE */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--bg-secondary);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* HEADER */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .year-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .year-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .year-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .year-btn:hover:not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .header-tools {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* MONTH TABS */
+        .month-tabs-container {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 80px;
+            z-index: 99;
+        }
+
+        .month-tabs {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .month-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .month-tab {
+            min-width: 120px;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .month-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--bg-primary);
+        }
+
+        .month-tab:hover:not(.active) {
+            color: var(--text-primary);
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        /* MAIN LAYOUT */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 30px;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 140px;
+            height: fit-content;
+        }
+
+        /* DASHBOARD CARDS */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-advanced {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: var(--bg-primary);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary);
+        }
+
+        .dashboard-card.entradas::before { background: var(--success); }
+        .dashboard-card.saidas::before { background: var(--danger); }
+        .dashboard-card.dividas::before { background: var(--warning); }
+        .dashboard-card.metas::before { background: var(--info); }
+        .dashboard-card.comparativo::before { background: var(--primary); }
+        .dashboard-card.tendencia::before { background: #ff6b35; }
+        .dashboard-card.eficiencia::before { background: #2d8659; }
+
+        .dashboard-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dashboard-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-value.entradas { color: var(--success); }
+        .dashboard-value.saidas { color: var(--danger); }
+        .dashboard-value.saldo { color: var(--text-primary); }
+        .dashboard-value.dividas { color: var(--warning); }
+
+        .dashboard-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* FORM SECTION */
+        .section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group.hidden {
+            display: none;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .form-group input.error,
+        .form-group select.error {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        /* ERROR MESSAGES */
+        .error-message {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* SEARCH BAR */
+        .search-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-primary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* BUTTONS */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-icon {
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        /* CUSTOM SELECT MANAGEMENT */
+        .custom-select-container {
+            position: relative;
+        }
+
+        .add-option-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* DEBT PANEL */
+        .debt-panel {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .debt-panel-header {
+            background: var(--warning);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .debt-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .debt-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .debt-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .debt-item:last-child {
+            border-bottom: none;
+        }
+
+        .debt-info h4 {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .debt-amount {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .debt-amount.positive { color: var(--success); }
+        .debt-amount.negative { color: var(--danger); }
+
+        .debt-count {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* TRANSACTIONS TABLE */
+        .transactions-section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table-header {
+            background: var(--bg-secondary);
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-filters {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: var(--bg-tertiary);
+        }
+
+        th.sortable::after {
+            content: ' ⚪';
+            color: var(--text-secondary);
+        }
+
+        th.sort-asc::after {
+            content: ' ▲';
+            color: var(--primary);
+        }
+
+        th.sort-desc::after {
+            content: ' ▼';
+            color: var(--primary);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .value-positive { color: var(--success); font-weight: 600; }
+        .value-negative { color: var(--danger); font-weight: 600; }
+
+        .shared-badge {
+            background: var(--warning);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* SPLIT FORM */
+        .split-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .split-type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .split-type-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .people-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .person-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .person-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-value {
+            min-width: 100px;
+        }
+
+        /* PAGINATION */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover {
+            background: var(--bg-secondary);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* NOTIFICATIONS */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .notification.error {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notification.warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .right-panel {
+                order: -1;
+                position: relative;
+                top: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table-filters {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+        }
+
+        /* UTILITIES */
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .text-muted { color: var(--text-secondary); }
+
+        .mb-0 { margin-bottom: 0; }
+        .mb-1 { margin-bottom: 10px; }
+        .mb-2 { margin-bottom: 20px; }
+        .mb-3 { margin-bottom: 30px; }
+
+        .hidden { display: none; }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">< Alanis Finanças /> </div>
+            
+            <div class="year-selector">
+                <label>Ano:</label>
+                <button class="year-btn" data-year="2023">2023</button>
+                <button class="year-btn active" data-year="2024">2024</button>
+                <button class="year-btn" data-year="2025">2025</button>
+                <button class="year-btn" data-year="2026">2026</button>
+            </div>
+
+            <div class="header-tools">
+                <button class="btn btn-secondary btn-small" onclick="app.exportData()">
+                    📤 Exportar
+                </button>
+                <button class="btn btn-secondary btn-small" onclick="document.getElementById('importFile').click()">
+                    📥 Importar
+                </button>
+                <input type="file" id="importFile" accept=".json" onchange="app.importData(event)" style="display: none;">
+                <button class="btn btn-secondary btn-small" onclick="app.openSettings()">
+                    ⚙️ Config
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MONTH TABS -->
+    <div class="month-tabs-container">
+        <div class="month-tabs" id="monthTabs">
+            <button class="month-tab active" data-month="0">Janeiro</button>
+            <button class="month-tab" data-month="1">Fevereiro</button>
+            <button class="month-tab" data-month="2">Março</button>
+            <button class="month-tab" data-month="3">Abril</button>
+            <button class="month-tab" data-month="4">Maio</button>
+            <button class="month-tab" data-month="5">Junho</button>
+            <button class="month-tab" data-month="6">Julho</button>
+            <button class="month-tab" data-month="7">Agosto</button>
+            <button class="month-tab" data-month="8">Setembro</button>
+            <button class="month-tab" data-month="9">Outubro</button>
+            <button class="month-tab" data-month="10">Novembro</button>
+            <button class="month-tab" data-month="11">Dezembro</button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <div class="left-panel">
+            <!-- DASHBOARD -->
+            <div class="dashboard">
+                <div class="dashboard-card entradas">
+                    <div class="dashboard-title">💰 Entradas</div>
+                    <div class="dashboard-value entradas" id="totalEntradas">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Receitas do período</div>
+                </div>
+                <div class="dashboard-card saidas">
+                    <div class="dashboard-title">📉 Saídas</div>
+                    <div class="dashboard-value saidas" id="totalSaidas">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Gastos do período</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="dashboard-title">📊 Saldo</div>
+                    <div class="dashboard-value saldo" id="saldoTotal">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Resultado líquido</div>
+                </div>
+                <div class="dashboard-card dividas">
+                    <div class="dashboard-title">🤝 Dívidas</div>
+                    <div class="dashboard-value dividas" id="totalDividas">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Valores em aberto</div>
+                </div>
+            </div>
+
+            <!-- FORM SECTION -->
+            <div class="section">
+                <h2 class="section-title">➕ Nova Transação</h2>
+                <form id="transactionForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="data">📅 Data</label>
+                            <input type="date" id="data" name="data" required>
+                            <div class="error-message" id="dataError">Data inválida</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipo">📊 Tipo</label>
+                            <select id="tipo" name="tipo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Entrada">💰 Entrada</option>
+                                <option value="Saída">📉 Saída</option>
+                            </select>
+                            <div class="error-message" id="tipoError">Tipo é obrigatório</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="descricao">📝 Descrição</label>
+                            <input type="text" id="descricao" name="descricao" placeholder="Ex: Salário, Compras no mercado..." required>
+                            <div class="error-message" id="descricaoError">Descrição é obrigatória</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="categoria">🏷️ Categoria</label>
+                            <div class="custom-select-container">
+                                <select id="categoria" name="categoria" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                                <button type="button" class="add-option-btn" onclick="app.addCustomOption('categoria')">+</button>
+                            </div>
+                            <div class="error-message" id="categoriaError">Categoria é obrigatória</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="banco">🏦 Banco/Conta</label>
+                            <div class="custom-select-container">
+                                <select id="banco" name="banco" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                                <button type="button" class="add-option-btn" onclick="app.addCustomOption('banco')">+</button>
+                            </div>
+                            <div class="error-message" id="bancoError">Banco é obrigatório</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="valor">💵 Valor Total</label>
+                            <input type="number" id="valor" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
+                            <div class="error-message" id="valorError">Valor deve ser maior que zero</div>
+                        </div>
+                        
+                        <div class="form-group hidden" id="valorPagoGroup">
+                            <label for="valorPago">💳 Valor Pago por Mim</label>
+                            <input type="number" id="valorPago" name="valorPago" step="0.01" min="0" placeholder="0,00">
+                            <div class="error-message" id="valorPagoError">Valor pago inválido</div>
+                        </div>
+                        
+                        <div class="form-group" id="gastoParaGroup">
+                            <label for="gastoPara">👤 Gasto para (opcional)</label>
+                            <select id="gastoPara" name="gastoPara">
+                                <option value="">Gasto pessoal</option>
+                            </select>
+                            <div style="margin-top: 5px;">
+                                <button type="button" class="btn btn-secondary btn-small" onclick="app.addPersonFromGasto()">
+                                    ➕ Nova Pessoa
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="formaPagamento">💳 Forma de Pagamento</label>
+                            <select id="formaPagamento" name="formaPagamento" required>
+                                <option value="">Selecione...</option>
+                                <option value="PIX">🔄 PIX</option>
+                                <option value="Débito">💳 Débito</option>
+                                <option value="Crédito">💎 Crédito</option>
+                                <option value="Dinheiro">💵 Dinheiro</option>
+                                <option value="TED/DOC">🏦 TED/DOC</option>
+                            </select>
+                            <div class="error-message" id="formaPagamentoError">Forma de pagamento é obrigatória</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="observacao">📄 Observações</label>
+                            <textarea id="observacao" name="observacao" rows="2" placeholder="Informações adicionais..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="compartilhada" name="compartilhada">
+                        <label for="compartilhada">🤝 Dividir este gasto com outras pessoas</label>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Adicionar Transação
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="app.clearForm()">
+                            🔄 Limpar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TRANSACTIONS TABLE -->
+            <div class="transactions-section">
+                <div class="table-header">
+                    <h2 class="section-title">📋 Histórico de Transações</h2>
+                    
+                    <div class="search-container">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por descrição, valor ou observações...">
+                    </div>
+                    
+                    <div class="table-filters">
+                        <div class="filter-group">
+                            <label>Tipo:</label>
+                            <select id="filterTipo">
+                                <option value="">Todos</option>
+                                <option value="Entrada">Entradas</option>
+                                <option value="Saída">Saídas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Categoria:</label>
+                            <select id="filterCategoria">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Banco:</label>
+                            <select id="filterBanco">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Status:</label>
+                            <select id="filterStatus">
+                                <option value="">Todos</option>
+                                <option value="compartilhada">Compartilhadas</option>
+                                <option value="individual">Individuais</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="data">📅 Data</th>
+                                <th class="sortable" data-sort="descricao">📝 Descrição</th>
+                                <th class="sortable" data-sort="tipo">📊 Tipo</th>
+                                <th class="sortable" data-sort="valor">💵 Valor</th>
+                                <th class="sortable" data-sort="valorPago">💳 Pago</th>
+                                <th class="sortable" data-sort="categoria">🏷️ Categoria</th>
+                                <th class="sortable" data-sort="banco">🏦 Banco</th>
+                                <th>🤝 Status</th>
+                                <th>⚙️ Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsBody">
+                            <tr>
+                                <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                    Nenhuma transação encontrada
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination" id="pagination">
+                    <!-- Paginação será inserida dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+            <!-- DEBT PANEL -->
+            <div class="debt-panel">
+                <div class="debt-panel-header">
+                    🤝 Dívidas Ativas
+                </div>
+                <div class="debt-list" id="debtList">
+                    <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                        Nenhuma dívida ativa
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK STATS -->
+            <div class="section">
+                <h3 class="section-title">📊 Estatísticas Rápidas</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Transações este mês:</span>
+                        <strong id="statsTransacoes">0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Gastos compartilhados:</span>
+                        <strong id="statsCompartilhados">0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Pessoas envolvidas:</span>
+                        <strong id="statsPessoas">0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Maior gasto:</span>
+                        <strong id="statsMaiorGasto">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GASTOS POR PESSOA -->
+            <div class="section">
+                <h3 class="section-title">👤 Gastos por Pessoa</h3>
+                <div id="gastosPorPessoa">
+                    <p class="text-muted">Nenhum gasto para outras pessoas</p>
+                </div>
+            </div>
+
+            <!-- RECENT PEOPLE -->
+            <div class="section">
+                <h3 class="section-title">👥 Pessoas Recentes</h3>
+                <div id="recentPeople">
+                    <p class="text-muted">Nenhuma pessoa cadastrada</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALS -->
+    
+    <!-- SPLIT MODAL -->
+    <div class="modal-overlay" id="splitModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🤝 Dividir Gasto</h3>
+                <button class="modal-close" onclick="app.closeSplitModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="split-type-selector">
+                    <button type="button" class="split-type-btn active" data-type="igual">
+                        📊 Divisão Igual
+                    </button>
+                    <button type="button" class="split-type-btn" data-type="percentual">
+                        📈 Por Percentual
+                    </button>
+                    <button type="button" class="split-type-btn" data-type="fixo">
+                        💰 Valores Fixos
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>👥 Adicionar Pessoa:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newPersonName" placeholder="Nome da pessoa">
+                        <button type="button" class="btn btn-secondary" onclick="app.addPersonToSplit()">
+                            ➕ Adicionar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="people-list" id="splitPeopleList">
+                    <!-- Pessoas serão adicionadas dinamicamente -->
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                        <span>Total a dividir:</span>
+                        <span id="splitTotalValue">R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeSplitModal()">
+                    ❌ Cancelar
+                </button>
+                <button class="btn btn-primary" onclick="app.saveSplitTransaction()">
+                    ✅ Salvar Divisão
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEBT DETAIL MODAL -->
+    <div class="modal-overlay" id="debtModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="debtModalTitle">👤 Detalhes da Dívida</h3>
+                <button class="modal-close" onclick="app.closeDebtModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="debtModalBody">
+                <!-- Conteúdo será carregado dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeDebtModal()">
+                    ❌ Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">⚙️ Configurações</h3>
+                <button class="modal-close" onclick="app.closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>🏷️ Categorias Personalizadas:</label>
+                    <div id="customCategories"></div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="app.addCustomCategory()">
+                        ➕ Nova Categoria
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>🏦 Bancos/Contas Personalizadas:</label>
+                    <div id="customBanks"></div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="app.addCustomBank()">
+                        ➕ Novo Banco
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>👥 Pessoas Cadastradas:</label>
+                    <div id="peopleList"></div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="app.addPerson()">
+                        ➕ Nova Pessoa
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="app.clearAllData()">
+                    🗑️ Limpar Tudo
+                </button>
+                <button class="btn btn-secondary" onclick="app.closeSettings()">
+                    ❌ Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AdvancedFinancialApp {
+            constructor() {
+                this.currentYear = new Date().getFullYear();
+                this.currentMonth = new Date().getMonth();
+                
+                this.data = this.loadData();
+                this.tempSplitData = null;
+                this.editingTransactionId = null;
+                this.searchTerm = '';
+                this.sortField = 'data';
+                this.sortDirection = 'desc';
+                this.currentPage = 1;
+                this.itemsPerPage = 20;
+                
+                this.initializeDefaults();
+                this.bindEvents();
+                this.updateDisplay();
+                this.setTodayDate();
+            }
+
+            // INITIALIZATION
+            initializeDefaults() {
+                if (!this.data.categories) {
+                    this.data.categories = [
+                        { id: 'alimentacao', name: '🍽️ Alimentação', custom: false },
+                        { id: 'transporte', name: '🚗 Transporte', custom: false },
+                        { id: 'moradia', name: '🏠 Moradia', custom: false },
+                        { id: 'saude', name: '💊 Saúde', custom: false },
+                        { id: 'educacao', name: '📚 Educação', custom: false },
+                        { id: 'lazer', name: '🎯 Lazer', custom: false },
+                        { id: 'salario', name: '💰 Salário', custom: false },
+                        { id: 'freelance', name: '💻 Freelance', custom: false },
+                        { id: 'investimentos', name: '📈 Investimentos', custom: false },
+                        { id: 'outros', name: '📦 Outros', custom: false }
+                    ];
+                }
+
+                if (!this.data.banks) {
+                    this.data.banks = [
+                        { id: 'nubank', name: '🟣 Nubank', custom: false },
+                        { id: 'inter', name: '🟠 Inter', custom: false },
+                        { id: 'bradesco', name: '🔴 Bradesco', custom: false },
+                        { id: 'itau', name: '🔵 Itaú', custom: false },
+                        { id: 'santander', name: '🔴 Santander', custom: false },
+                        { id: 'caixa', name: '🟡 Caixa', custom: false },
+                        { id: 'bb', name: '🟡 Banco do Brasil', custom: false },
+                        { id: 'dinheiro', name: '💵 Dinheiro', custom: false }
+                    ];
+                }
+
+                if (!this.data.people) {
+                    this.data.people = [];
+                }
+
+                if (!this.data.transactions) {
+                    this.data.transactions = {};
+                }
+
+                this.populateSelects();
+                this.populateGastoParaSelect();
+                this.saveData();
+            }
+
+            bindEvents() {
+                // Year selector
+                document.querySelectorAll('.year-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.switchYear(parseInt(e.target.dataset.year));
+                    });
+                });
+
+                // Month tabs
+                document.querySelectorAll('.month-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        this.switchMonth(parseInt(e.target.dataset.month));
+                    });
+                });
+
+                // Form
+                document.getElementById('transactionForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    if (this.editingTransactionId) {
+                        this.updateTransaction();
+                    } else {
+                        this.addTransaction();
+                    }
+                });
+
+                // Compartilhada checkbox
+                document.getElementById('compartilhada').addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        this.openSplitModal();
+                    } else {
+                        this.tempSplitData = null;
+                    }
+                    this.toggleValorPagoVisibility(e.target.checked);
+                });
+
+                // Split type buttons
+                document.querySelectorAll('.split-type-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.switchSplitType(e.target.dataset.type);
+                    });
+                });
+
+                // Search with debounce
+                let searchTimeout;
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.searchTerm = e.target.value.toLowerCase();
+                        this.currentPage = 1;
+                        this.updateTransactionsTable();
+                    }, 300);
+                });
+
+                // Filters
+                ['filterTipo', 'filterCategoria', 'filterBanco', 'filterStatus'].forEach(filterId => {
+                    document.getElementById(filterId).addEventListener('change', () => {
+                        this.currentPage = 1;
+                        this.applyFilters();
+                    });
+                });
+
+                // Table sorting
+                document.querySelectorAll('th.sortable').forEach(th => {
+                    th.addEventListener('click', () => {
+                        this.sortTable(th.dataset.sort);
+                    });
+                });
+
+                // Auto-fill valor pago when valor changes
+                document.getElementById('valor').addEventListener('input', (e) => {
+                    const valorPagoField = document.getElementById('valorPago');
+                    if (!valorPagoField.value || this.parseDecimal(valorPagoField.value) === 0) {
+                        valorPagoField.value = e.target.value;
+                    }
+                });
+
+                // Form validation
+                ['data', 'tipo', 'descricao', 'categoria', 'banco', 'valor', 'valorPago', 'formaPagamento'].forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.addEventListener('blur', () => this.validateField(fieldId));
+                        field.addEventListener('input', () => this.clearFieldError(fieldId));
+                    }
+                });
+            }
+
+            // VALIDATION
+            validateField(fieldId) {
+                const field = document.getElementById(fieldId);
+                const errorEl = document.getElementById(`${fieldId}Error`);
+                let isValid = true;
+                let errorMessage = '';
+
+                if (field && errorEl) {
+                    switch (fieldId) {
+                        case 'data':
+                            const date = new Date(field.value);
+                            const today = new Date();
+                            today.setHours(23, 59, 59, 999);
+                            if (!field.value) {
+                                isValid = false;
+                                errorMessage = 'Data é obrigatória';
+                            } else if (date > today) {
+                                isValid = false;
+                                errorMessage = 'Data não pode ser futura';
+                            }
+                            break;
+
+                        case 'valor':
+                            const valor = this.parseDecimal(field.value);
+                            if (!field.value || valor <= 0) {
+                                isValid = false;
+                                errorMessage = 'Valor deve ser maior que zero';
+                            }
+                            break;
+
+                        case 'valorPago':
+                            if (field.value) {
+                                const valorPago = this.parseDecimal(field.value);
+                                const valorTotal = this.parseDecimal(document.getElementById('valor').value);
+                                if (valorPago < 0) {
+                                    isValid = false;
+                                    errorMessage = 'Valor pago não pode ser negativo';
+                                } else if (valorPago > valorTotal) {
+                                    isValid = false;
+                                    errorMessage = 'Valor pago não pode ser maior que o valor total';
+                                }
+                            }
+                            break;
+
+                        default:
+                            if (field.required && !field.value.trim()) {
+                                isValid = false;
+                                errorMessage = 'Campo obrigatório';
+                            }
+                            break;
+                    }
+
+                    if (!isValid) {
+                        field.classList.add('error');
+                        errorEl.textContent = errorMessage;
+                        errorEl.classList.add('show');
+                    } else {
+                        field.classList.remove('error');
+                        errorEl.classList.remove('show');
+                    }
+                }
+
+                return isValid;
+            }
+
+            clearFieldError(fieldId) {
+                const field = document.getElementById(fieldId);
+                const errorEl = document.getElementById(`${fieldId}Error`);
+                
+                if (field && errorEl) {
+                    field.classList.remove('error');
+                    errorEl.classList.remove('show');
+                }
+            }
+
+            validateForm() {
+                const fields = ['data', 'tipo', 'descricao', 'categoria', 'banco', 'valor', 'formaPagamento'];
+                let isValid = true;
+
+                fields.forEach(fieldId => {
+                    if (!this.validateField(fieldId)) {
+                        isValid = false;
+                    }
+                });
+
+                // Additional validation for valorPago
+                if (document.getElementById('valorPago').value) {
+                    if (!this.validateField('valorPago')) {
+                        isValid = false;
+                    }
+                }
+
+                return isValid;
+            }
+
+            // UTILITY METHODS
+            parseDecimal(value) {
+                if (typeof value === 'number') return Math.round(value * 100) / 100;
+                if (typeof value === 'string') {
+                    const parsed = parseFloat(value);
+                    return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
+                }
+                return 0;
+            }
+
+            formatCurrency(value) {
+                const numValue = this.parseDecimal(value);
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(numValue);
+            }
+
+            showLoading(show = true) {
+                const overlay = document.getElementById('loadingOverlay');
+                if (show) {
+                    overlay.classList.add('active');
+                } else {
+                    overlay.classList.remove('active');
+                }
+            }
+
+            // DATA MANAGEMENT
+            loadData() {
+                try {
+                    const saved = localStorage.getItem('advanced_financial_data');
+                    return saved ? JSON.parse(saved) : {};
+                } catch (error) {
+                    console.error('Erro ao carregar dados:', error);
+                    this.showNotification('Erro ao carregar dados salvos. Iniciando com dados vazios.', 'error');
+                    return {};
+                }
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('advanced_financial_data', JSON.stringify(this.data));
+                } catch (error) {
+                    console.error('Erro ao salvar dados:', error);
+                    this.showNotification('Erro ao salvar dados. Verifique o espaço de armazenamento.', 'error');
+                }
+            }
+
+            getTransactionKey() {
+                return `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}`;
+            }
+
+            getCurrentTransactions() {
+                const key = this.getTransactionKey();
+                return this.data.transactions[key] || [];
+            }
+
+            // UI UPDATES
+            setTodayDate() {
+                const today = new Date();
+                const dateString = today.toISOString().split('T')[0];
+                document.getElementById('data').value = dateString;
+            }
+
+            switchYear(year) {
+                this.currentYear = year;
+                
+                // Update UI
+                document.querySelectorAll('.year-btn').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.year) === year);
+                });
+                
+                this.currentPage = 1;
+                this.updateDisplay();
+            }
+
+            switchMonth(month) {
+                this.currentMonth = month;
+                
+                // Update UI
+                document.querySelectorAll('.month-tab').forEach(tab => {
+                    tab.classList.toggle('active', parseInt(tab.dataset.month) === month);
+                });
+                
+                this.currentPage = 1;
+                this.updateDisplay();
+            }
+
+            populateSelects() {
+                // Categories
+                const categorySelects = [document.getElementById('categoria'), document.getElementById('filterCategoria')];
+                categorySelects.forEach(select => {
+                    if (!select) return;
+                    const currentValue = select.value;
+                    
+                    if (select.id === 'categoria') {
+                        select.innerHTML = '<option value="">Selecione...</option>';
+                    } else {
+                        select.innerHTML = '<option value="">Todas</option>';
+                    }
+                    
+                    this.data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.id;
+                        option.textContent = cat.name;
+                        select.appendChild(option);
+                    });
+                    
+                    select.value = currentValue;
+                });
+
+                // Banks
+                const bankSelects = [document.getElementById('banco'), document.getElementById('filterBanco')];
+                bankSelects.forEach(select => {
+                    if (!select) return;
+                    const currentValue = select.value;
+                    
+                    if (select.id === 'banco') {
+                        select.innerHTML = '<option value="">Selecione...</option>';
+                    } else {
+                        select.innerHTML = '<option value="">Todos</option>';
+                    }
+                    
+                    this.data.banks.forEach(bank => {
+                        const option = document.createElement('option');
+                        option.value = bank.id;
+                        option.textContent = bank.name;
+                        select.appendChild(option);
+                    });
+                    
+                    select.value = currentValue;
+                });
+            }
+
+            // TRANSACTION MANAGEMENT
+            addTransaction() {
+                if (!this.validateForm()) {
+                    this.showNotification('Por favor, corrija os erros no formulário', 'error');
+                    return;
+                }
+
+                this.showLoading(true);
+
+                const formData = new FormData(document.getElementById('transactionForm'));
+                const transactionData = Object.fromEntries(formData);
+                const isShared = document.getElementById('compartilhada').checked;
+
+                const transaction = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    data: transactionData.data,
+                    descricao: transactionData.descricao,
+                    tipo: transactionData.tipo,
+                    categoria: transactionData.categoria,
+                    banco: transactionData.banco,
+                    valor: this.parseDecimal(transactionData.valor),
+                    valorPago: isShared ? this.parseDecimal(transactionData.valorPago) || this.parseDecimal(transactionData.valor) : this.parseDecimal(transactionData.valor),
+                    formaPagamento: transactionData.formaPagamento,
+                    observacao: transactionData.observacao,
+                    compartilhada: isShared,
+                    divisao: this.tempSplitData,
+                    gastoPara: transactionData.gastoPara || null,
+                    createdAt: new Date().toISOString()
+                };
+
+                // Save transaction
+                const key = this.getTransactionKey();
+                if (!this.data.transactions[key]) {
+                    this.data.transactions[key] = [];
+                }
+
+                this.data.transactions[key].unshift(transaction);
+
+                // Update people debts if shared
+                if (transaction.compartilhada && transaction.divisao) {
+                    this.updateDebts(transaction);
+                }
+
+                this.saveData();
+                this.updateDisplay();
+                this.clearForm();
+                
+                setTimeout(() => {
+                    this.showLoading(false);
+                    this.showNotification('✅ Transação adicionada com sucesso!', 'success');
+                }, 500);
+            }
+
+            editTransaction(id) {
+                const key = this.getTransactionKey();
+                const transactions = this.data.transactions[key] || [];
+                const transaction = transactions.find(t => t.id === id);
+                
+                if (!transaction) {
+                    this.showNotification('Transação não encontrada!', 'error');
+                    return;
+                }
+
+                // Fill form with transaction data
+                document.getElementById('data').value = transaction.data;
+                document.getElementById('tipo').value = transaction.tipo;
+                document.getElementById('descricao').value = transaction.descricao;
+                document.getElementById('categoria').value = transaction.categoria;
+                document.getElementById('banco').value = transaction.banco;
+                document.getElementById('valor').value = transaction.valor;
+                document.getElementById('valorPago').value = transaction.valorPago;
+                document.getElementById('formaPagamento').value = transaction.formaPagamento;
+                document.getElementById('observacao').value = transaction.observacao || '';
+                document.getElementById('compartilhada').checked = transaction.compartilhada;
+                document.getElementById('gastoPara').value = transaction.gastoPara || '';
+                
+                // Handle shared transaction data
+                if (transaction.compartilhada && transaction.divisao) {
+                    this.tempSplitData = JSON.parse(JSON.stringify(transaction.divisao)); // Deep clone
+                }
+                
+                this.toggleValorPagoVisibility(transaction.compartilhada);
+                
+                // Store the ID for updating instead of creating new
+                this.editingTransactionId = id;
+                
+                // Change button text
+                const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
+                submitBtn.innerHTML = '✏️ Atualizar Transação';
+                
+                // Scroll to form
+                document.querySelector('.section').scrollIntoView({ behavior: 'smooth' });
+                
+                this.showNotification('Transação carregada para edição', 'info');
+            }
+
+            updateTransaction() {
+                if (!this.validateForm()) {
+                    this.showNotification('Por favor, corrija os erros no formulário', 'error');
+                    return;
+                }
+
+                this.showLoading(true);
+
+                const formData = new FormData(document.getElementById('transactionForm'));
+                const transactionData = Object.fromEntries(formData);
+                const isShared = document.getElementById('compartilhada').checked;
+
+                const key = this.getTransactionKey();
+                const transactions = this.data.transactions[key] || [];
+                const transactionIndex = transactions.findIndex(t => t.id === this.editingTransactionId);
+                
+                if (transactionIndex === -1) {
+                    this.showLoading(false);
+                    this.showNotification('Transação não encontrada!', 'error');
+                    return;
+                }
+
+                const oldTransaction = transactions[transactionIndex];
+                
+                // Remove old debts if it was shared
+                if (oldTransaction.compartilhada && oldTransaction.divisao) {
+                    this.removeDebts(oldTransaction);
+                }
+
+                const updatedTransaction = {
+                    ...oldTransaction,
+                    data: transactionData.data,
+                    descricao: transactionData.descricao,
+                    tipo: transactionData.tipo,
+                    categoria: transactionData.categoria,
+                    banco: transactionData.banco,
+                    valor: this.parseDecimal(transactionData.valor),
+                    valorPago: isShared ? this.parseDecimal(transactionData.valorPago) || this.parseDecimal(transactionData.valor) : this.parseDecimal(transactionData.valor),
+                    formaPagamento: transactionData.formaPagamento,
+                    observacao: transactionData.observacao,
+                    compartilhada: isShared,
+                    divisao: this.tempSplitData,
+                    gastoPara: transactionData.gastoPara || null,
+                    updatedAt: new Date().toISOString()
+                };
+
+                transactions[transactionIndex] = updatedTransaction;
+
+                // Add new debts if now shared
+                if (updatedTransaction.compartilhada && updatedTransaction.divisao) {
+                    this.updateDebts(updatedTransaction);
+                }
+
+                this.saveData();
+                this.updateDisplay();
+                this.clearForm();
+                
+                setTimeout(() => {
+                    this.showLoading(false);
+                    this.showNotification('✅ Transação atualizada com sucesso!', 'success');
+                }, 500);
+            }
+
+            updateDebts(transaction) {
+                if (!transaction.divisao || !transaction.divisao.people) return;
+
+                transaction.divisao.people.forEach(person => {
+                    if (!person.selected) return;
+
+                    let personData = this.data.people.find(p => p.id === person.id);
+                    if (!personData) {
+                        personData = {
+                            id: person.id,
+                            name: person.name,
+                            totalOwed: 0,
+                            transactions: []
+                        };
+                        this.data.people.push(personData);
+                    }
+
+                    const debtAmount = this.parseDecimal(person.valorDevido);
+                    personData.totalOwed = this.parseDecimal(personData.totalOwed + debtAmount);
+                    personData.transactions.push({
+                        transactionId: transaction.id,
+                        description: transaction.descricao,
+                        amount: debtAmount,
+                        date: transaction.data,
+                        paid: false
+                    });
+                });
+            }
+
+            deleteTransaction(id) {
+                if (!confirm('Tem certeza que deseja excluir esta transação?')) return;
+
+                this.showLoading(true);
+
+                const key = this.getTransactionKey();
+                const transactions = this.data.transactions[key] || [];
+                const transactionIndex = transactions.findIndex(t => t.id === id);
+                
+                if (transactionIndex === -1) {
+                    this.showLoading(false);
+                    return;
+                }
+
+                const transaction = transactions[transactionIndex];
+                
+                // Remove debts if shared
+                if (transaction.compartilhada && transaction.divisao) {
+                    this.removeDebts(transaction);
+                }
+
+                transactions.splice(transactionIndex, 1);
+                this.saveData();
+                
+                setTimeout(() => {
+                    this.showLoading(false);
+                    this.updateDisplay();
+                    this.showNotification('🗑️ Transação excluída!', 'success');
+                }, 300);
+            }
+
+            removeDebts(transaction) {
+                if (!transaction.divisao || !transaction.divisao.people) return;
+
+                transaction.divisao.people.forEach(person => {
+                    if (!person.selected) return;
+
+                    const personData = this.data.people.find(p => p.id === person.id);
+                    if (personData) {
+                        const debtAmount = this.parseDecimal(person.valorDevido);
+                        personData.totalOwed = this.parseDecimal(personData.totalOwed - debtAmount);
+                        personData.transactions = personData.transactions.filter(
+                            t => t.transactionId !== transaction.id
+                        );
+                    }
+                });
+            }
+
+            clearForm() {
+                document.getElementById('transactionForm').reset();
+                document.getElementById('compartilhada').checked = false;
+                
+                // Clear errors
+                document.querySelectorAll('.error-message').forEach(error => {
+                    error.classList.remove('show');
+                });
+                document.querySelectorAll('.error').forEach(field => {
+                    field.classList.remove('error');
+                });
+
+                this.tempSplitData = null;
+                this.editingTransactionId = null;
+                
+                // Reset button text
+                const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
+                submitBtn.innerHTML = '➕ Adicionar Transação';
+                
+                this.toggleValorPagoVisibility(false);
+                this.setTodayDate();
+            }
+
+            toggleValorPagoVisibility(isShared) {
+                const valorPagoGroup = document.getElementById('valorPagoGroup');
+                if (isShared) {
+                    valorPagoGroup.classList.remove('hidden');
+                } else {
+                    valorPagoGroup.classList.add('hidden');
+                    document.getElementById('valorPago').value = '';
+                }
+            }
+
+            // SPLIT FUNCTIONALITY
+            openSplitModal() {
+                const valor = this.parseDecimal(document.getElementById('valor').value);
+                if (valor <= 0) {
+                    this.showNotification('Defina um valor para a transação primeiro!', 'error');
+                    document.getElementById('compartilhada').checked = false;
+                    return;
+                }
+
+                document.getElementById('splitTotalValue').textContent = this.formatCurrency(valor);
+                document.getElementById('splitModal').classList.add('active');
+                this.updateSplitPeopleList();
+            }
+
+            closeSplitModal() {
+                document.getElementById('splitModal').classList.remove('active');
+                if (!this.tempSplitData) {
+                    document.getElementById('compartilhada').checked = false;
+                }
+            }
+
+            switchSplitType(type) {
+                document.querySelectorAll('.split-type-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.type === type);
+                });
+                this.updateSplitCalculation();
+            }
+
+            addPersonToSplit() {
+                const nameInput = document.getElementById('newPersonName');
+                const name = nameInput.value.trim();
+                
+                if (!name) {
+                    this.showNotification('Digite o nome da pessoa!', 'error');
+                    return;
+                }
+
+                // Check if person already exists in people list
+                let person = this.data.people.find(p => p.name.toLowerCase() === name.toLowerCase());
+                if (!person) {
+                    person = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        name: name,
+                        totalOwed: 0,
+                        transactions: []
+                    };
+                    this.data.people.push(person);
+                    this.saveData();
+                }
+
+                // Initialize split data if not exists
+                if (!this.tempSplitData) {
+                    this.tempSplitData = {
+                        type: 'igual',
+                        people: []
+                    };
+                }
+
+                // Check if person already added to split
+                if (this.tempSplitData.people.find(p => p.id === person.id)) {
+                    this.showNotification('Pessoa já foi adicionada!', 'warning');
+                    return;
+                }
+
+                this.tempSplitData.people.push({
+                    id: person.id,
+                    name: person.name,
+                    selected: true,
+                    valorDevido: 0,
+                    percentual: 0
+                });
+
+                nameInput.value = '';
+                this.updateSplitPeopleList();
+                this.updateSplitCalculation();
+            }
+
+            updateSplitPeopleList() {
+                const container = document.getElementById('splitPeopleList');
+                
+                if (!this.tempSplitData || !this.tempSplitData.people.length) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Nenhuma pessoa adicionada ainda</p>';
+                    return;
+                }
+
+                const activeType = document.querySelector('.split-type-btn.active').dataset.type;
+
+                container.innerHTML = this.tempSplitData.people.map(person => `
+                    <div class="person-item">
+                        <input type="checkbox" class="person-checkbox" 
+                               ${person.selected ? 'checked' : ''}
+                               onchange="app.togglePersonInSplit('${person.id}')">
+                        <div class="person-info">
+                            <strong>${person.name}</strong>
+                            <div class="person-value">
+                                ${activeType === 'igual' ? 
+                                    `<span class="text-success">${this.formatCurrency(person.valorDevido)}</span>` :
+                                    activeType === 'percentual' ?
+                                    `<input type="number" min="0" max="100" value="${person.percentual}" 
+                                     onchange="app.updatePersonPercentual('${person.id}', this.value)" 
+                                     style="width: 60px; padding: 4px;"> %` :
+                                    `<input type="number" min="0" step="0.01" value="${person.valorDevido}" 
+                                     onchange="app.updatePersonValue('${person.id}', this.value)"
+                                     style="width: 80px; padding: 4px;">`
+                                }
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-small" 
+                                onclick="app.removePersonFromSplit('${person.id}')">
+                            🗑️
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            togglePersonInSplit(personId) {
+                const person = this.tempSplitData.people.find(p => p.id === personId);
+                if (person) {
+                    person.selected = !person.selected;
+                    this.updateSplitCalculation();
+                }
+            }
+
+            updatePersonPercentual(personId, value) {
+                const person = this.tempSplitData.people.find(p => p.id === personId);
+                if (person) {
+                    person.percentual = this.parseDecimal(value);
+                    this.updateSplitCalculation();
+                }
+            }
+
+            updatePersonValue(personId, value) {
+                const person = this.tempSplitData.people.find(p => p.id === personId);
+                if (person) {
+                    person.valorDevido = this.parseDecimal(value);
+                }
+            }
+
+            removePersonFromSplit(personId) {
+                if (!this.tempSplitData) return;
+                
+                this.tempSplitData.people = this.tempSplitData.people.filter(p => p.id !== personId);
+                this.updateSplitPeopleList();
+                this.updateSplitCalculation();
+            }
+
+            updateSplitCalculation() {
+                if (!this.tempSplitData) return;
+
+                const totalValue = this.parseDecimal(document.getElementById('valor').value);
+                const activeType = document.querySelector('.split-type-btn.active').dataset.type;
+                const selectedPeople = this.tempSplitData.people.filter(p => p.selected);
+
+                this.tempSplitData.type = activeType;
+
+                switch (activeType) {
+                    case 'igual':
+                        // Include the user (person paying) in the equal division
+                        const totalPeopleCount = selectedPeople.length + 1; // +1 for the user themselves
+                        const valuePerPerson = totalValue / totalPeopleCount;
+                        selectedPeople.forEach(person => {
+                            person.valorDevido = this.parseDecimal(valuePerPerson);
+                        });
+                        break;
+
+                    case 'percentual':
+                        selectedPeople.forEach(person => {
+                            person.valorDevido = this.parseDecimal((totalValue * person.percentual) / 100);
+                        });
+                        break;
+
+                    case 'fixo':
+                        // Values are set manually, no automatic calculation
+                        break;
+                }
+
+                this.updateSplitPeopleList();
+            }
+
+            saveSplitTransaction() {
+                if (!this.tempSplitData || !this.tempSplitData.people.length) {
+                    this.showNotification('Adicione pelo menos uma pessoa!', 'error');
+                    return;
+                }
+
+                const selectedPeople = this.tempSplitData.people.filter(p => p.selected);
+                if (!selectedPeople.length) {
+                    this.showNotification('Selecione pelo menos uma pessoa!', 'error');
+                    return;
+                }
+
+                const totalValue = this.parseDecimal(document.getElementById('valor').value);
+                const totalSplit = selectedPeople.reduce((sum, p) => sum + this.parseDecimal(p.valorDevido), 0);
+
+                if (Math.abs(totalSplit - totalValue) > 0.01) {
+                    this.showNotification(`Atenção: Total dividido (${this.formatCurrency(totalSplit)}) diferente do valor total (${this.formatCurrency(totalValue)})`, 'warning');
+                }
+
+                this.closeSplitModal();
+                this.showNotification('✅ Divisão configurada!', 'success');
+            }
+
+            // DEBT MANAGEMENT
+            updateDebtsPanel() {
+                const container = document.getElementById('debtList');
+                const peopleWithDebts = this.data.people.filter(p => Math.abs(p.totalOwed) > 0.01);
+
+                if (!peopleWithDebts.length) {
+                    container.innerHTML = `
+                        <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                            Nenhuma dívida ativa
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = peopleWithDebts.map(person => `
+                    <div class="debt-item" onclick="app.openDebtDetail('${person.id}')">
+                        <div class="debt-info">
+                            <h4>${person.name}</h4>
+                            <div class="debt-count">${person.transactions.filter(t => !t.paid).length} transações</div>
+                        </div>
+                        <div class="debt-amount ${person.totalOwed > 0 ? 'negative' : 'positive'}">
+                            ${person.totalOwed > 0 ? 'Deve: ' : 'Recebe: '}${this.formatCurrency(Math.abs(person.totalOwed))}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            openDebtDetail(personId) {
+                const person = this.data.people.find(p => p.id === personId);
+                if (!person) return;
+
+                document.getElementById('debtModalTitle').textContent = `👤 ${person.name}`;
+                
+                const pendingTransactions = person.transactions.filter(t => !t.paid);
+                const totalOwed = pendingTransactions.reduce((sum, t) => sum + this.parseDecimal(t.amount), 0);
+
+                document.getElementById('debtModalBody').innerHTML = `
+                    <div class="mb-2">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <span><strong>Total ${totalOwed > 0 ? 'devido' : 'a receber'}:</strong></span>
+                            <span style="font-size: 18px; font-weight: bold; color: ${totalOwed > 0 ? 'var(--danger)' : 'var(--success)'};">
+                                ${this.formatCurrency(Math.abs(totalOwed))}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <h4>📋 Transações Pendentes:</h4>
+                        ${pendingTransactions.length ? pendingTransactions.map(t => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 8px;">
+                                <div>
+                                    <div style="font-weight: 600;">${t.description}</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">${new Date(t.date).toLocaleDateString('pt-BR')}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-weight: bold; color: var(--danger);">${this.formatCurrency(t.amount)}</span>
+                                    <button class="btn btn-success btn-small" onclick="app.markDebtAsPaid('${personId}', '${t.transactionId}')">
+                                        ✅ Pago
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-muted">Nenhuma transação pendente</p>'}
+                    </div>
+                `;
+
+                document.getElementById('debtModal').classList.add('active');
+            }
+
+            closeDebtModal() {
+                document.getElementById('debtModal').classList.remove('active');
+            }
+
+            markDebtAsPaid(personId, transactionId) {
+                const person = this.data.people.find(p => p.id === personId);
+                if (!person) return;
+
+                const transaction = person.transactions.find(t => t.transactionId === transactionId);
+                if (!transaction) return;
+
+                transaction.paid = true;
+                const debtAmount = this.parseDecimal(transaction.amount);
+                person.totalOwed = this.parseDecimal(person.totalOwed - debtAmount);
+
+                this.saveData();
+                this.updateDisplay();
+                this.openDebtDetail(personId); // Refresh modal
+                this.showNotification('✅ Dívida marcada como paga!', 'success');
+            }
+
+            // TABLE SORTING
+            sortTable(field) {
+                if (this.sortField === field) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortField = field;
+                    this.sortDirection = 'desc';
+                }
+
+                // Update UI
+                document.querySelectorAll('th.sortable').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                    if (th.dataset.sort === this.sortField) {
+                        th.classList.add(this.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+
+                this.currentPage = 1;
+                this.updateTransactionsTable();
+            }
+
+            // DISPLAY UPDATES
+            updateDisplay() {
+                this.updateDashboard();
+                this.updateTransactionsTable();
+                this.updateFilters();
+                this.updateDebtsPanel();
+                this.updateStats();
+                this.updateRecentPeople();
+                this.updateGastosPorPessoa();
+            }
+
+            updateDashboard() {
+                const transactions = this.getCurrentTransactions();
+                
+                const entradas = transactions
+                    .filter(t => t.tipo === 'Entrada')
+                    .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+
+                const saidas = transactions
+                    .filter(t => t.tipo === 'Saída')
+                    .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
+
+                const saldo = entradas - saidas;
+
+                const totalDividas = this.data.people
+                    .reduce((sum, p) => sum + Math.abs(this.parseDecimal(p.totalOwed)), 0);
+
+                document.getElementById('totalEntradas').textContent = this.formatCurrency(entradas);
+                document.getElementById('totalSaidas').textContent = this.formatCurrency(saidas);
+                document.getElementById('saldoTotal').textContent = this.formatCurrency(saldo);
+                document.getElementById('totalDividas').textContent = this.formatCurrency(totalDividas);
+
+                // Update saldo color
+                const saldoEl = document.getElementById('saldoTotal');
+                saldoEl.className = `dashboard-value ${saldo >= 0 ? 'entradas' : 'saidas'}`;
+            }
+
+            updateTransactionsTable() {
+                const tbody = document.getElementById('transactionsBody');
+                const transactions = this.getFilteredAndSortedTransactions();
+                
+                // Pagination
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const paginatedTransactions = transactions.slice(startIndex, endIndex);
+
+                if (!paginatedTransactions.length) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                ${transactions.length === 0 ? 'Nenhuma transação encontrada' : 'Nenhuma transação nesta página'}
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = paginatedTransactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.data).toLocaleDateString('pt-BR')}</td>
+                            <td>
+                                <div style="font-weight: 600;">${t.descricao}</div>
+                                ${t.observacao ? `<div style="font-size: 12px; color: var(--text-secondary);">${t.observacao}</div>` : ''}
+                            </td>
+                            <td>
+                                <span style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; 
+                                             background: ${t.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}; color: white;">
+                                    ${t.tipo}
+                                </span>
+                            </td>
+                            <td class="${t.tipo === 'Entrada' ? 'value-positive' : 'value-negative'}">
+                                ${this.formatCurrency(t.valor)}
+                            </td>
+                            <td class="${t.tipo === 'Entrada' ? 'value-positive' : 'value-negative'}">
+                                ${this.formatCurrency(t.valorPago)}
+                            </td>
+                            <td>${this.getCategoryName(t.categoria)}</td>
+                            <td>${this.getBankName(t.banco)}</td>
+                            <td>
+                                ${t.compartilhada ? 
+                                    `<span class="shared-badge">COMPARTILHADA</span>` : 
+                                    t.gastoPara ? 
+                                    `<span style="background: var(--info); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">PARA: ${this.getPersonName(t.gastoPara)}</span>` :
+                                    '<span style="color: var(--text-secondary);">Individual</span>'
+                                }
+                                ${t.compartilhada && t.divisao ? 
+                                    `<div style="font-size: 11px; color: var(--text-secondary);">
+                                        ${t.divisao.people.filter(p => p.selected).length} pessoa(s)
+                                    </div>` : ''
+                                }
+                            </td>
+                            <td class="action-buttons">
+                                <button class="btn btn-secondary btn-icon btn-small" onclick="app.editTransaction('${t.id}')" title="Editar">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-icon btn-small" onclick="app.deleteTransaction('${t.id}')" title="Excluir">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                this.updatePagination(transactions.length);
+            }
+
+            getFilteredAndSortedTransactions() {
+                let transactions = this.getCurrentTransactions();
+                
+                // Apply filters
+                const filters = {
+                    tipo: document.getElementById('filterTipo').value,
+                    categoria: document.getElementById('filterCategoria').value,
+                    banco: document.getElementById('filterBanco').value,
+                    status: document.getElementById('filterStatus').value
+                };
+
+                transactions = transactions.filter(t => {
+                    // Search filter
+                    if (this.searchTerm) {
+                        const searchableText = `${t.descricao} ${t.observacao} ${t.valor}`.toLowerCase();
+                        if (!searchableText.includes(this.searchTerm)) return false;
+                    }
+
+                    // Other filters
+                    if (filters.tipo && t.tipo !== filters.tipo) return false;
+                    if (filters.categoria && t.categoria !== filters.categoria) return false;
+                    if (filters.banco && t.banco !== filters.banco) return false;
+                    if (filters.status === 'compartilhada' && !t.compartilhada) return false;
+                    if (filters.status === 'individual' && t.compartilhada) return false;
+                    
+                    return true;
+                });
+
+                // Sort transactions
+                transactions.sort((a, b) => {
+                    let aValue = a[this.sortField];
+                    let bValue = b[this.sortField];
+
+                    // Handle different data types
+                    if (this.sortField === 'data') {
+                        aValue = new Date(aValue);
+                        bValue = new Date(bValue);
+                    } else if (this.sortField === 'valor' || this.sortField === 'valorPago') {
+                        aValue = this.parseDecimal(aValue);
+                        bValue = this.parseDecimal(bValue);
+                    } else if (typeof aValue === 'string') {
+                        aValue = aValue.toLowerCase();
+                        bValue = bValue.toLowerCase();
+                    }
+
+                    if (this.sortDirection === 'asc') {
+                        return aValue > bValue ? 1 : -1;
+                    } else {
+                        return aValue < bValue ? 1 : -1;
+                    }
+                });
+
+                return transactions;
+            }
+
+            updatePagination(totalItems) {
+                const pagination = document.getElementById('pagination');
+                const totalPages = Math.ceil(totalItems / this.itemsPerPage);
+
+                if (totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
+                }
+
+                let html = '';
+
+                // Previous button
+                if (this.currentPage > 1) {
+                    html += `<button class="pagination-btn" onclick="app.goToPage(${this.currentPage - 1})">‹ Anterior</button>`;
+                }
+
+                // Page numbers
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(totalPages, this.currentPage + 2);
+
+                if (startPage > 1) {
+                    html += `<button class="pagination-btn" onclick="app.goToPage(1)">1</button>`;
+                    if (startPage > 2) {
+                        html += `<span>...</span>`;
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `<button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" onclick="app.goToPage(${i})">${i}</button>`;
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        html += `<span>...</span>`;
+                    }
+                    html += `<button class="pagination-btn" onclick="app.goToPage(${totalPages})">${totalPages}</button>`;
+                }
+
+                // Next button
+                if (this.currentPage < totalPages) {
+                    html += `<button class="pagination-btn" onclick="app.goToPage(${this.currentPage + 1})">Próxima ›</button>`;
+                }
+
+                pagination.innerHTML = html;
+            }
+
+            goToPage(page) {
+                this.currentPage = page;
+                this.updateTransactionsTable();
+            }
+
+            updateFilters() {
+                const transactions = this.getCurrentTransactions();
+                
+                // Categories filter
+                const categoriaFilter = document.getElementById('filterCategoria');
+                const currentCategoria = categoriaFilter.value;
+                categoriaFilter.innerHTML = '<option value="">Todas</option>';
+                
+                const usedCategories = [...new Set(transactions.map(t => t.categoria))];
+                usedCategories.forEach(catId => {
+                    const option = document.createElement('option');
+                    option.value = catId;
+                    option.textContent = this.getCategoryName(catId);
+                    categoriaFilter.appendChild(option);
+                });
+                categoriaFilter.value = currentCategoria;
+
+                // Banks filter
+                const bancoFilter = document.getElementById('filterBanco');
+                const currentBanco = bancoFilter.value;
+                bancoFilter.innerHTML = '<option value="">Todos</option>';
+                
+                const usedBanks = [...new Set(transactions.map(t => t.banco))];
+                usedBanks.forEach(bankId => {
+                    const option = document.createElement('option');
+                    option.value = bankId;
+                    option.textContent = this.getBankName(bankId);
+                    bancoFilter.appendChild(option);
+                });
+                bancoFilter.value = currentBanco;
+            }
+
+            updateStats() {
+                const transactions = this.getCurrentTransactions();
+                const sharedTransactions = transactions.filter(t => t.compartilhada);
+                const peopleInvolved = new Set();
+                
+                sharedTransactions.forEach(t => {
+                    if (t.divisao && t.divisao.people) {
+                        t.divisao.people.forEach(p => {
+                            if (p.selected) peopleInvolved.add(p.name);
+                        });
+                    }
+                });
+
+                const maxExpense = transactions
+                    .filter(t => t.tipo === 'Saída')
+                    .reduce((max, t) => this.parseDecimal(t.valor) > max ? this.parseDecimal(t.valor) : max, 0);
+
+                document.getElementById('statsTransacoes').textContent = transactions.length;
+                document.getElementById('statsCompartilhados').textContent = sharedTransactions.length;
+                document.getElementById('statsPessoas').textContent = peopleInvolved.size;
+                document.getElementById('statsMaiorGasto').textContent = this.formatCurrency(maxExpense);
+            }
+
+            updateRecentPeople() {
+                const container = document.getElementById('recentPeople');
+                const recentPeople = this.data.people.slice(-5).reverse();
+
+                if (!recentPeople.length) {
+                    container.innerHTML = '<p class="text-muted">Nenhuma pessoa cadastrada</p>';
+                    return;
+                }
+
+                container.innerHTML = recentPeople.map(person => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                        <span>${person.name}</span>
+                        <span class="${person.totalOwed > 0 ? 'text-danger' : person.totalOwed < 0 ? 'text-success' : 'text-muted'}" style="font-size: 12px;">
+                            ${this.formatCurrency(Math.abs(person.totalOwed))}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            applyFilters() {
+                this.updateTransactionsTable();
+            }
+
+            // UTILITY METHODS
+            getCategoryName(id) {
+                const category = this.data.categories.find(c => c.id === id);
+                return category ? category.name : id;
+            }
+
+            getBankName(id) {
+                const bank = this.data.banks.find(b => b.id === id);
+                return bank ? bank.name : id;
+            }
+
+            getPersonName(id) {
+                const person = this.data.people.find(p => p.id === id);
+                return person ? person.name : 'Pessoa não encontrada';
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => notification.classList.add('show'), 100);
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            // CUSTOM OPTIONS
+            addCustomOption(type) {
+                const name = prompt(`Nome da nova ${type === 'categoria' ? 'categoria' : 'conta/banco'}:`);
+                if (!name || !name.trim()) return;
+
+                const id = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                const emoji = prompt('Emoji (opcional):') || '📦';
+
+                const newItem = {
+                    id: id,
+                    name: `${emoji} ${name.trim()}`,
+                    custom: true
+                };
+
+                if (type === 'categoria') {
+                    if (this.data.categories.find(c => c.id === id)) {
+                        this.showNotification('Categoria já existe!', 'error');
+                        return;
+                    }
+                    this.data.categories.push(newItem);
+                } else {
+                    if (this.data.banks.find(b => b.id === id)) {
+                        this.showNotification('Banco já existe!', 'error');
+                        return;
+                    }
+                    this.data.banks.push(newItem);
+                }
+
+                this.saveData();
+                this.populateSelects();
+                this.populateGastoParaSelect();
+                this.showNotification(`✅ ${type === 'categoria' ? 'Categoria' : 'Banco'} adicionado!`, 'success');
+            }
+
+            populateGastoParaSelect() {
+                const gastoParaSelect = document.getElementById('gastoPara');
+                if (!gastoParaSelect) return;
+
+                const currentValue = gastoParaSelect.value;
+                gastoParaSelect.innerHTML = '<option value="">Gasto pessoal</option>';
+
+                this.data.people.forEach(person => {
+                    const option = document.createElement('option');
+                    option.value = person.id;
+                    option.textContent = person.name;
+                    gastoParaSelect.appendChild(option);
+                });
+
+                gastoParaSelect.value = currentValue;
+            }
+
+            addPersonFromGasto() {
+                const name = prompt('Nome da pessoa:');
+                if (!name || !name.trim()) return;
+
+                if (this.data.people.find(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
+                    this.showNotification('Pessoa já existe!', 'error');
+                    return;
+                }
+
+                const person = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    name: name.trim(),
+                    totalOwed: 0,
+                    transactions: []
+                };
+
+                this.data.people.push(person);
+                this.saveData();
+                this.populateGastoParaSelect();
+                
+                // Auto-select the new person
+                document.getElementById('gastoPara').value = person.id;
+                
+                this.showNotification('Pessoa adicionada!', 'success');
+            }
+
+            updateGastosPorPessoa() {
+                const container = document.getElementById('gastosPorPessoa');
+                const transactions = this.getCurrentTransactions();
+                
+                // Calculate spending per person this month
+                const gastosPorPessoa = {};
+                
+                transactions.forEach(t => {
+                    if (t.gastoPara && t.tipo === 'Saída') {
+                        const person = this.data.people.find(p => p.id === t.gastoPara);
+                        if (person) {
+                            if (!gastosPorPessoa[person.id]) {
+                                gastosPorPessoa[person.id] = {
+                                    name: person.name,
+                                    total: 0,
+                                    count: 0
+                                };
+                            }
+                            gastosPorPessoa[person.id].total += this.parseDecimal(t.valor);
+                            gastosPorPessoa[person.id].count++;
+                        }
+                    }
+                });
+
+                const gastosArray = Object.values(gastosPorPessoa);
+                
+                if (!gastosArray.length) {
+                    container.innerHTML = '<p class="text-muted">Nenhum gasto para outras pessoas</p>';
+                    return;
+                }
+
+                // Sort by total spent (highest first)
+                gastosArray.sort((a, b) => b.total - a.total);
+
+                container.innerHTML = gastosArray.map(gasto => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                        <div>
+                            <span style="font-weight: 600;">${gasto.name}</span>
+                            <div style="font-size: 11px; color: var(--text-secondary);">${gasto.count} transaç${gasto.count > 1 ? 'ões' : 'ão'}</div>
+                        </div>
+                        <span style="font-weight: bold; color: var(--danger);">
+                            ${this.formatCurrency(gasto.total)}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // SETTINGS
+            openSettings() {
+                document.getElementById('settingsModal').classList.add('active');
+                this.updateSettingsModal();
+            }
+
+            closeSettings() {
+                document.getElementById('settingsModal').classList.remove('active');
+            }
+
+            updateSettingsModal() {
+                // Custom categories
+                const customCategories = this.data.categories.filter(c => c.custom);
+                document.getElementById('customCategories').innerHTML = customCategories.map(cat => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 5px;">
+                        <span>${cat.name}</span>
+                        <button class="btn btn-danger btn-small" onclick="app.removeCustomCategory('${cat.id}')">🗑️</button>
+                    </div>
+                `).join('') || '<p class="text-muted">Nenhuma categoria personalizada</p>';
+
+                // Custom banks
+                const customBanks = this.data.banks.filter(b => b.custom);
+                document.getElementById('customBanks').innerHTML = customBanks.map(bank => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 5px;">
+                        <span>${bank.name}</span>
+                        <button class="btn btn-danger btn-small" onclick="app.removeCustomBank('${bank.id}')">🗑️</button>
+                    </div>
+                `).join('') || '<p class="text-muted">Nenhuma conta personalizada</p>';
+
+                // People
+                document.getElementById('peopleList').innerHTML = this.data.people.map(person => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 5px;">
+                        <span>${person.name} (${this.formatCurrency(person.totalOwed)} ${person.totalOwed >= 0 ? 'deve' : 'recebe'})</span>
+                        <button class="btn btn-danger btn-small" onclick="app.removePerson('${person.id}')">🗑️</button>
+                    </div>
+                `).join('') || '<p class="text-muted">Nenhuma pessoa cadastrada</p>';
+            }
+
+            addCustomCategory() {
+                this.addCustomOption('categoria');
+                this.updateSettingsModal();
+            }
+
+            addCustomBank() {
+                this.addCustomOption('banco');
+                this.updateSettingsModal();
+            }
+
+            removeCustomCategory(id) {
+                if (!confirm('Tem certeza que deseja remover esta categoria?')) return;
+                this.data.categories = this.data.categories.filter(c => c.id !== id);
+                this.saveData();
+                this.populateSelects();
+                this.populateGastoParaSelect();
+                this.updateSettingsModal();
+                this.showNotification('Categoria removida!', 'success');
+            }
+
+            removeCustomBank(id) {
+                if (!confirm('Tem certeza que deseja remover esta conta/banco?')) return;
+                this.data.banks = this.data.banks.filter(b => b.id !== id);
+                this.saveData();
+                this.populateSelects();
+                this.populateGastoParaSelect();
+                this.updateSettingsModal();
+                this.showNotification('Conta removida!', 'success');
+            }
+
+            addPerson() {
+                const name = prompt('Nome da pessoa:');
+                if (!name || !name.trim()) return;
+
+                if (this.data.people.find(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
+                    this.showNotification('Pessoa já existe!', 'error');
+                    return;
+                }
+
+                this.data.people.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    name: name.trim(),
+                    totalOwed: 0,
+                    transactions: []
+                });
+
+                this.saveData();
+                this.populateGastoParaSelect();
+                this.updateSettingsModal();
+                this.showNotification('Pessoa adicionada!', 'success');
+            }
+
+            removePerson(id) {
+                const person = this.data.people.find(p => p.id === id);
+                if (!person) return;
+
+                if (Math.abs(person.totalOwed) > 0.01) {
+                    if (!confirm(`${person.name} possui dívidas pendentes. Tem certeza que deseja remover?`)) {
+                        return;
+                    }
+                }
+
+                this.data.people = this.data.people.filter(p => p.id !== id);
+                this.saveData();
+                this.populateGastoParaSelect();
+                this.updateSettingsModal();
+                this.updateDisplay();
+                this.showNotification('Pessoa removida!', 'success');
+            }
+
+            clearAllData() {
+                if (!confirm('ATENÇÃO: Esta ação irá apagar TODOS os dados salvos. Tem certeza?')) return;
+                if (!confirm('Última confirmação: TODOS os dados serão perdidos permanentemente!')) return;
+
+                localStorage.removeItem('advanced_financial_data');
+                this.data = {};
+                this.initializeDefaults();
+                this.updateDisplay();
+                this.closeSettings();
+                this.showNotification('Todos os dados foram limpos!', 'warning');
+            }
+
+            // DATA EXPORT/IMPORT
+            exportData() {
+                this.showLoading(true);
+
+                setTimeout(() => {
+                    const dataToExport = {
+                        version: '2.0',
+                        exportedAt: new Date().toISOString(),
+                        data: this.data
+                    };
+
+                    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `financial_data_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    this.showLoading(false);
+                    this.showNotification('📤 Dados exportados!', 'success');
+                }, 500);
+            }
+
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.showLoading(true);
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        
+                        if (imported.data) {
+                            this.data = imported.data;
+                        } else {
+                            this.data = imported; // Legacy format
+                        }
+
+                        // Data integrity validation
+                        if (!this.data.transactions) this.data.transactions = {};
+                        if (!this.data.people) this.data.people = [];
+                        if (!this.data.categories) this.data.categories = [];
+                        if (!this.data.banks) this.data.banks = [];
+
+                        this.saveData();
+                        this.initializeDefaults();
+                        
+                        setTimeout(() => {
+                            this.updateDisplay();
+                            this.showLoading(false);
+                            this.showNotification('📥 Dados importados com sucesso!', 'success');
+                        }, 500);
+
+                    } catch (error) {
+                        console.error('Erro ao importar:', error);
+                        this.showLoading(false);
+                        this.showNotification('Erro ao importar arquivo. Verifique se é um arquivo válido.', 'error');
+                    }
+                };
+
+                reader.onerror = () => {
+                    this.showLoading(false);
+                    this.showNotification('Erro ao ler arquivo', 'error');
+                };
+
+                reader.readAsText(file);
+                
+                // Clear file input
+                event.target.value = '';
+            }
+        }
+
+        // Initialize app when page loads
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new AdvancedFinancialApp();
+        });
+    </script>
+</body>
+</html>
