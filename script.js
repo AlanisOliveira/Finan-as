@@ -33,6 +33,7 @@ class AdvancedFinancialApp {
         
         // Initial setup, then load data
         this.initializeDefaults();
+        this.initializeTheme();
         this.bindEvents();
         this.updateDisplay();
         this.setTodayDate();
@@ -50,6 +51,9 @@ class AdvancedFinancialApp {
         this.setCurrentDateActive();
         this.switchYear(this.currentYear);
         this.switchMonth(this.currentMonth);
+        
+        // Setup mobile-specific event listeners
+        this.setupMobileFeatures();
     }
 
     // INITIALIZATION
@@ -1367,8 +1371,140 @@ class AdvancedFinancialApp {
             tab.classList.remove('active');
             if (parseInt(tab.dataset.month) === this.currentMonth) {
                 tab.classList.add('active');
+                // Scroll para o mês ativo no mobile
+                this.scrollToActiveMonth(tab);
             }
         });
+    }
+
+    scrollToActiveMonth(activeTab) {
+        // Auto-scroll para o mês ativo em dispositivos móveis
+        if (window.innerWidth <= 768) {
+            const monthTabs = document.querySelector('.month-tabs');
+            if (monthTabs && activeTab) {
+                const scrollLeft = activeTab.offsetLeft - (monthTabs.clientWidth / 2) + (activeTab.clientWidth / 2);
+                monthTabs.scrollTo({
+                    left: scrollLeft,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }
+
+    setupMobileFeatures() {
+        // Detectar se é dispositivo mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        // Adicionar classe para CSS específico
+        if (isMobile) {
+            document.body.classList.add('mobile-device');
+        }
+
+        // Listener para mudanças de orientação
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.handleOrientationChange();
+            }, 100);
+        });
+
+        // Listener para resize da janela
+        window.addEventListener('resize', () => {
+            this.handleWindowResize();
+        });
+
+        // Scroll suave para navegação por meses
+        document.querySelectorAll('.month-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    this.scrollToActiveMonth(tab);
+                }
+            });
+        });
+
+        // Melhorar experiência de toque nos modais
+        this.setupTouchModals();
+
+        // Auto-hide da barra de endereço no mobile (iOS Safari)
+        if (isMobile && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            this.hideAddressBar();
+        }
+    }
+
+    handleOrientationChange() {
+        // Reajustar layout após mudança de orientação
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            document.body.classList.add('mobile-device');
+        } else {
+            document.body.classList.remove('mobile-device');
+        }
+
+        // Scroll para mês ativo se necessário
+        const activeTab = document.querySelector('.month-tab.active');
+        if (activeTab && window.innerWidth <= 768) {
+            this.scrollToActiveMonth(activeTab);
+        }
+
+        // Reajustar modais abertos
+        const openModal = document.querySelector('.modal-overlay:not(.hidden)');
+        if (openModal) {
+            this.adjustModalForDevice(openModal);
+        }
+    }
+
+    handleWindowResize() {
+        // Throttle resize events para performance
+        clearTimeout(this.resizeTimeout);
+        this.resizeTimeout = setTimeout(() => {
+            this.handleOrientationChange();
+        }, 250);
+    }
+
+    setupTouchModals() {
+        // Melhorar experiência de toque nos modais
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            // Fechar modal ao tocar no overlay (fora do modal)
+            overlay.addEventListener('touchstart', (e) => {
+                if (e.target === overlay) {
+                    // Encontrar método de fechamento específico
+                    const closeBtn = overlay.querySelector('.modal-close');
+                    if (closeBtn) {
+                        closeBtn.click();
+                    }
+                }
+            }, { passive: true });
+        });
+    }
+
+    adjustModalForDevice(modalOverlay) {
+        const modal = modalOverlay.querySelector('.modal');
+        if (!modal) return;
+
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Ajustar altura do modal para viewport móvel
+            const viewportHeight = window.innerHeight;
+            const maxHeight = viewportHeight * 0.9;
+            modal.style.maxHeight = `${maxHeight}px`;
+            
+            // Centralizar verticalmente
+            modal.style.marginTop = 'auto';
+            modal.style.marginBottom = 'auto';
+        } else {
+            // Reset para desktop
+            modal.style.maxHeight = '';
+            modal.style.marginTop = '';
+            modal.style.marginBottom = '';
+        }
+    }
+
+    hideAddressBar() {
+        // Esconder barra de endereço no iOS Safari
+        setTimeout(() => {
+            window.scrollTo(0, 1);
+        }, 500);
     }
 
     // ==================== SISTEMA DE METAS ====================
@@ -2795,6 +2931,28 @@ class AdvancedFinancialApp {
             alert('Seu ID atual é: ' + this.userId);
         } else {
             alert('Nenhum ID de usuário ativo. Gere um novo ID ou carregue um existente.');
+        }
+    }
+
+    // THEME MANAGEMENT
+    initializeTheme() {
+        const savedTheme = localStorage.getItem('financa_theme') || 'light';
+        this.applyTheme(savedTheme);
+    }
+
+    toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        this.applyTheme(newTheme);
+        localStorage.setItem('financa_theme', newTheme);
+    }
+
+    applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        const themeButton = document.getElementById('themeToggle');
+        if (themeButton) {
+            // Mostrar o tema ATUAL, não o próximo
+            themeButton.innerHTML = theme === 'light' ? '☀️ Claro' : '🌙 Escuro';
         }
     }
 }
