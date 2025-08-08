@@ -22,10 +22,10 @@
             
             <div class="year-selector">
                 <label>Ano:</label>
-                <button class="year-btn" data-year="2023">2023</button>
-                <button class="year-btn active" data-year="2024">2024</button>
+                
                 <button class="year-btn" data-year="2025">2025</button>
                 <button class="year-btn" data-year="2026">2026</button>
+                <button class="year-btn" data-year="2027">2027</button>
             </div>
 
             <div class="header-tools">
@@ -51,7 +51,7 @@
     <!-- MONTH TABS -->
     <div class="month-tabs-container">
         <div class="month-tabs" id="monthTabs">
-            <button class="month-tab active" data-month="0">Janeiro</button>
+            <button class="month-tab" data-month="0">Janeiro</button>
             <button class="month-tab" data-month="1">Fevereiro</button>
             <button class="month-tab" data-month="2">Março</button>
             <button class="month-tab" data-month="3">Abril</button>
@@ -82,30 +82,38 @@
                     <div class="dashboard-subtitle">Gastos do período</div>
                 </div>
                 <div class="dashboard-card">
-                    <div class="dashboard-title">📊 Saldo</div>
-                    <div class="dashboard-value saldo" id="saldoTotal">R$ 0,00</div>
-                    <div class="dashboard-subtitle">Resultado líquido</div>
+                    <div class="dashboard-title">📊 Saldo Total</div>
+                    <div class="dashboard-value saldo" id="saldoAcumulativo">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Saldo acumulativo</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="dashboard-title">📅 Saldo do Mês</div>
+                    <div class="dashboard-value saldo" id="saldoMes">R$ 0,00</div>
+                    <div class="dashboard-subtitle">Resultado mensal</div>
                 </div>
                 <div class="dashboard-card dividas">
                     <div class="dashboard-title">🤝 Dívidas</div>
                     <div class="dashboard-value dividas" id="totalDividas">R$ 0,00</div>
                     <div class="dashboard-subtitle">Valores em aberto</div>
                 </div>
-            </div>
-
-            <!-- ADVANCED DASHBOARD -->
-            <div class="dashboard-advanced">
-                <div class="dashboard-card metas">
-                    <div class="dashboard-title">🎯 Metas do Mês</div>
-                    <div class="dashboard-value" id="metaProgress">0%</div>
-                    <div class="dashboard-subtitle" id="metaSubtitle">Sem metas definidas</div>
-                </div>
+                <div class="dashboard-advanced">
+                
                 <div class="dashboard-card comparativo">
                     <div class="dashboard-title">📈 Comparativo (Mês)</div>
                     <div class="dashboard-value" id="comparativoValue">-</div>
                     <div class="dashboard-subtitle" id="comparativoSubtitle">Mês anterior sem dados</div>
                 </div>
+                <div class="dashboard-card metas">
+                    <div class="dashboard-title">🎯 Metas do Mês</div>
+                    <div class="dashboard-value" id="metaProgress">0%</div>
+                    <div class="dashboard-subtitle" id="metaSubtitle">Sem metas definidas</div>
+                </div>
             </div>
+                
+            </div>
+
+            <!-- ADVANCED DASHBOARD -->
+            
 
             <!-- CARD DASHBOARD -->
             <div class="section" id="cardDashboardSection">
@@ -400,28 +408,26 @@
                 <div class="goals-form-container" style="margin-bottom: 20px;">
                     <form id="goalsForm" class="form-inline">
                         <div class="form-group" style="margin-right: 15px;">
-                            <label for="metaNome">Nome da Meta</label>
-                            <input type="text" id="metaNome" placeholder="Ex: Emergência, Viagem" required>
-                        </div>
-                        
-                        <div class="form-group" style="margin-right: 15px;">
-                            <label for="metaBanco">Banco/Conta</label>
-                            <select id="metaBanco" required>
-                                <option value="">Selecione o banco</option>
+                            <label for="goalCategoria">Categoria</label>
+                            <select id="goalCategoria" required>
+                                <option value="">Selecione a categoria</option>
                             </select>
                         </div>
                         
                         <div class="form-group" style="margin-right: 15px;">
-                            <label for="metaValorDesejado">Valor Desejado</label>
-                            <input type="number" id="metaValorDesejado" step="0.01" min="0" required>
+                            <label for="goalTipo">Tipo de Meta</label>
+                            <select id="goalTipo" required>
+                                <option value="limite_maximo">🚫 Limite Máximo</option>
+                                <option value="economia_minima">💰 Meta de Economia</option>
+                            </select>
                         </div>
                         
                         <div class="form-group" style="margin-right: 15px;">
-                            <label for="metaValorAtual">Valor Atual</label>
-                            <input type="number" id="metaValorAtual" step="0.01" min="0" value="0">
+                            <label for="goalValor">Valor (R$)</label>
+                            <input type="number" id="goalValor" step="0.01" min="0.01" placeholder="500.00" required>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">➕ Adicionar Meta</button>
+                        <button type="submit" class="btn btn-primary">🎯 Adicionar Meta</button>
                     </form>
                 </div>
                 

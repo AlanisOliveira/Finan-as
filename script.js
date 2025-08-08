@@ -47,6 +47,7 @@ class AdvancedFinancialApp {
             this.updateDisplay();
         }
         // Ensure UI reflects current year and month on load
+        this.setCurrentDateActive();
         this.switchYear(this.currentYear);
         this.switchMonth(this.currentMonth);
     }
@@ -90,7 +91,7 @@ class AdvancedFinancialApp {
         }
 
         if (!this.data.goals) {
-            this.data.goals = [];
+            this.data.goals = {};  // Organizado por período: { "2024-1": [...], "2024-2": [...] }
         }
 
         if (!this.data.cards) {
@@ -103,6 +104,7 @@ class AdvancedFinancialApp {
 
         this.populateSelects();
         this.populateGastoParaSelect();
+        this.setCurrentDateActive(); // Definir mês/ano atual como ativo
         // No longer calling saveData() here, as it will be handled by Firestore or explicit save
     }
 
@@ -372,6 +374,7 @@ class AdvancedFinancialApp {
                 this.userId = id; // Save the loaded user ID
                 localStorage.setItem('financa_user_id', id); // Save ID for next time
                 this.initializeDefaults(); // Re-initialize defaults with loaded data
+                this.setCurrentDateActive(); // Garantir que mês/ano atual estejam selecionados
                 this.updateDisplay();
                 this.showNotification(`Dados carregados com sucesso para o ID: ${id}`, 'success');
             } else {
@@ -380,6 +383,7 @@ class AdvancedFinancialApp {
                 this.userId = id; // Still set the ID for saving new data
                 localStorage.setItem('financa_user_id', id);
                 this.initializeDefaults();
+                this.setCurrentDateActive(); // Garantir que mês/ano atual estejam selecionados
                 this.updateDisplay();
             }
         } catch (error) {
@@ -387,6 +391,7 @@ class AdvancedFinancialApp {
             this.showNotification(`Erro ao carregar dados do Firestore: ${error.message}`, 'error');
             this.data = {}; // Clear data on error
             this.initializeDefaults();
+            this.setCurrentDateActive(); // Garantir que mês/ano atual estejam selecionados
             this.updateDisplay();
         } finally {
             this.showLoading(false);
@@ -506,13 +511,15 @@ class AdvancedFinancialApp {
 
     populateSelects() {
         // Categories
-        const categorySelects = [document.getElementById('categoria'), document.getElementById('filterCategoria')];
+        const categorySelects = [document.getElementById('categoria'), document.getElementById('filterCategoria'), document.getElementById('goalCategoria')];
         categorySelects.forEach(select => {
             if (!select) return;
             const currentValue = select.value;
             
             if (select.id === 'categoria') {
                 select.innerHTML = '<option value="">Selecione...</option>';
+            } else if (select.id === 'goalCategoria') {
+                select.innerHTML = '<option value="">Selecione a categoria</option>';
             } else {
                 select.innerHTML = '<option value="">Todas</option>';
             }
@@ -593,7 +600,7 @@ class AdvancedFinancialApp {
 
             for (let i = 1; i <= installments; i++) {
                 const installmentDate = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + (i - 1), currentMonthDate.getDate());
-                const installmentKey = `${installmentDate.getFullYear()}-${String(installmentDate.getMonth()).padStart(2, '0')}`;
+                const installmentKey = `${installmentDate.getFullYear()}-${installmentDate.getMonth()}`;
 
                 const installmentTransaction = {
                     ...baseTransaction,
@@ -602,7 +609,8 @@ class AdvancedFinancialApp {
                     descricao: `${baseTransaction.descricao} (${i}/${installments})`,
                     valor: valuePerInstallment,
                     valorPago: valuePerInstallment, // Each installment is paid individually
-                    installmentOf: baseTransaction.id // Link to the original transaction ID
+                    installmentOf: baseTransaction.id, // Link to the original transaction ID
+                    isInstallment: true // Flag para identificar parcelas
                 };
 
                 if (!this.data.transactions[installmentKey]) {
@@ -610,9 +618,16 @@ class AdvancedFinancialApp {
                 }
                 this.data.transactions[installmentKey].unshift(installmentTransaction);
 
-                // Update people debts if shared (only for the first installment, or if we want to track each installment's shared part)
-                // For simplicity, shared debt is usually for the total amount, not per installment.
-                // If shared, the original transaction's division will handle the total debt.
+                // Se for gasto compartilhado, aplicar divisão a cada parcela
+                if (baseTransaction.compartilhada && baseTransaction.divisao) {
+                    // Para parcelas compartilhadas, dividir o valor da parcela entre as pessoas
+                    const parcelaDividida = { ...baseTransaction.divisao };
+                    parcelaDividida.pessoas = parcelaDividida.pessoas.map(person => ({
+                        ...person,
+                        valor_devido: (person.valor_devido || 0) / installments
+                    }));
+                    installmentTransaction.divisao = parcelaDividida;
+                }
             }
             this.showNotification(`✅ Transação parcelada em ${installments}x adicionada com sucesso!`, 'success');
 
@@ -630,6 +645,7 @@ class AdvancedFinancialApp {
 
         this.saveData();
         this.updateDisplay();
+        this.updateGoalsProgress(); // Atualizar progresso das metas após nova transação
         this.clearForm();
         
         setTimeout(() => {
@@ -1241,7 +1257,7 @@ class AdvancedFinancialApp {
         this.updateStats();
         this.updateRecentPeople();
         this.updateGastosPorPessoa();
-        this.updateGoalsDisplay();
+        this.updateGoalsDashboard();
         this.updateCardDashboard();
         this.updateLoanList();
         this.updateAnalysisSection();
@@ -1262,11 +1278,20 @@ class AdvancedFinancialApp {
 
         document.getElementById('totalEntradas').textContent = this.formatCurrency(entradasMes);
         document.getElementById('totalSaidas').textContent = this.formatCurrency(saidasMes);
-        document.getElementById('monthly-balance').textContent = this.formatCurrency(saldoMes);
+        // Saldo do mês atual
+        document.getElementById('saldoMes').textContent = this.formatCurrency(saldoMes);
+        
+        // Calcular saldo acumulativo (todas as transações até o mês atual)
+        const saldoAcumulativo = this.calculateAccumulativeBalance();
+        document.getElementById('saldoAcumulativo').textContent = this.formatCurrency(saldoAcumulativo);
 
         // Update saldo do mês color
-        const monthlyBalanceEl = document.getElementById('monthly-balance');
+        const monthlyBalanceEl = document.getElementById('saldoMes');
         monthlyBalanceEl.className = `dashboard-value ${saldoMes >= 0 ? 'entradas' : 'saidas'}`;
+        
+        // Update saldo acumulativo color
+        const accumulativeBalanceEl = document.getElementById('saldoAcumulativo');
+        accumulativeBalanceEl.className = `dashboard-value ${saldoAcumulativo >= 0 ? 'entradas' : 'saidas'}`;
 
         // Calculate and display accumulated balance
         this.updateAccumulatedBalance();
@@ -1295,11 +1320,226 @@ class AdvancedFinancialApp {
         }
 
         const accumulatedBalance = totalEntradas - totalSaidas;
-        document.getElementById('accumulated-balance').textContent = this.formatCurrency(accumulatedBalance);
+        // TODO: Elemento 'accumulated-balance' não existe no HTML atual
+        // document.getElementById('accumulated-balance').textContent = this.formatCurrency(accumulatedBalance);
 
         // Update accumulated balance color
-        const accumulatedBalanceEl = document.getElementById('accumulated-balance');
-        accumulatedBalanceEl.className = `dashboard-value ${accumulatedBalance >= 0 ? 'entradas' : 'saidas'}`;
+        // const accumulatedBalanceEl = document.getElementById('accumulated-balance');
+        // accumulatedBalanceEl.className = `dashboard-value ${accumulatedBalance >= 0 ? 'entradas' : 'saidas'}`;
+    }
+
+    calculateAccumulativeBalance() {
+        let totalEntradas = 0;
+        let totalSaidas = 0;
+        
+        // Iterar por todos os anos e meses até o mês/ano atual
+        for (let year = 2020; year <= this.currentYear; year++) {
+            const maxMonth = (year === this.currentYear) ? this.currentMonth : 11;
+            
+            for (let month = 0; month <= maxMonth; month++) {
+                const monthKey = `${year}-${month}`;
+                const transactions = this.data.transactions[monthKey] || [];
+                
+                transactions.forEach(t => {
+                    if (t.tipo === 'Entrada') {
+                        totalEntradas += this.parseDecimal(t.valor);
+                    } else if (t.tipo === 'Saída') {
+                        totalSaidas += this.parseDecimal(t.valor);
+                    }
+                });
+            }
+        }
+        
+        return totalEntradas - totalSaidas;
+    }
+
+    setCurrentDateActive() {
+        // Definir o ano atual como ativo
+        document.querySelectorAll('.year-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (parseInt(btn.dataset.year) === this.currentYear) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Definir o mês atual como ativo
+        document.querySelectorAll('.month-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (parseInt(tab.dataset.month) === this.currentMonth) {
+                tab.classList.add('active');
+            }
+        });
+    }
+
+    // ==================== SISTEMA DE METAS ====================
+    
+    getGoalKey() {
+        return `${this.currentYear}-${this.currentMonth}`;
+    }
+
+    addGoal(categoria, valorMeta, tipo = 'limite_maximo') {
+        const goalKey = this.getGoalKey();
+        
+        if (!this.data.goals[goalKey]) {
+            this.data.goals[goalKey] = [];
+        }
+
+        // Verificar se já existe meta para esta categoria no mês
+        const existingGoal = this.data.goals[goalKey].find(g => g.categoria === categoria);
+        if (existingGoal) {
+            this.showNotification(`Já existe uma meta para ${categoria} este mês!`, 'warning');
+            return false;
+        }
+
+        const goal = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            categoria: categoria,
+            tipo: tipo, // limite_maximo, economia_minima, meta_entrada
+            valor_meta: this.parseDecimal(valorMeta),
+            valor_gasto: 0, // calculado automaticamente
+            status: 'ativo',
+            criado_em: new Date().toISOString().split('T')[0],
+            alertas: {
+                '50_porcento': false,
+                '80_porcento': false,
+                '100_porcento': false
+            }
+        };
+
+        this.data.goals[goalKey].push(goal);
+        this.saveData();
+        this.updateGoalsProgress();
+        this.showNotification(`✅ Meta de ${categoria} adicionada com sucesso!`, 'success');
+        return true;
+    }
+
+    removeGoal(goalId) {
+        const goalKey = this.getGoalKey();
+        if (!this.data.goals[goalKey]) return;
+
+        this.data.goals[goalKey] = this.data.goals[goalKey].filter(g => g.id !== goalId);
+        this.saveData();
+        this.updateGoalsProgress();
+        this.showNotification('Meta removida!', 'success');
+    }
+
+    calculateGoalProgress() {
+        const goalKey = this.getGoalKey();
+        const goals = this.data.goals[goalKey] || [];
+        const transactionKey = `${this.currentYear}-${this.currentMonth}`;
+        const transactions = this.data.transactions[transactionKey] || [];
+
+        goals.forEach(goal => {
+            let totalSpent = 0;
+            
+            // Calcular total gasto na categoria
+            transactions.forEach(t => {
+                if (t.categoria === goal.categoria && t.tipo === 'Saída') {
+                    totalSpent += this.parseDecimal(t.valor);
+                }
+            });
+
+            goal.valor_gasto = totalSpent;
+            
+            // Verificar alertas
+            this.checkGoalAlerts(goal);
+        });
+
+        this.saveData();
+    }
+
+    checkGoalAlerts(goal) {
+        if (goal.tipo !== 'limite_maximo') return;
+
+        const percentage = (goal.valor_gasto / goal.valor_meta) * 100;
+        
+        if (percentage >= 100 && !goal.alertas['100_porcento']) {
+            goal.alertas['100_porcento'] = true;
+            this.showNotification(`🚨 Meta de ${goal.categoria} estourada! ${this.formatCurrency(goal.valor_gasto)}/${this.formatCurrency(goal.valor_meta)}`, 'error');
+        } else if (percentage >= 80 && !goal.alertas['80_porcento']) {
+            goal.alertas['80_porcento'] = true;
+            this.showNotification(`⚠️ Cuidado! 80% da meta de ${goal.categoria} atingida! ${this.formatCurrency(goal.valor_gasto)}/${this.formatCurrency(goal.valor_meta)}`, 'warning');
+        } else if (percentage >= 50 && !goal.alertas['50_porcento']) {
+            goal.alertas['50_porcento'] = true;
+            this.showNotification(`💡 Você já gastou 50% da meta de ${goal.categoria}: ${this.formatCurrency(goal.valor_gasto)}/${this.formatCurrency(goal.valor_meta)}`, 'info');
+        }
+    }
+
+    updateGoalsProgress() {
+        this.calculateGoalProgress();
+        this.updateGoalsDashboard();
+    }
+
+    updateGoalsDashboard() {
+        const goalKey = this.getGoalKey();
+        const goals = this.data.goals[goalKey] || [];
+        const activeGoalsDiv = document.getElementById('activeGoals');
+        
+        if (goals.length === 0) {
+            activeGoalsDiv.innerHTML = '<p class="text-muted">Nenhuma meta definida para este mês</p>';
+            return;
+        }
+
+        let html = '<div class="goals-grid">';
+        
+        goals.forEach(goal => {
+            const percentage = goal.valor_meta > 0 ? Math.min((goal.valor_gasto / goal.valor_meta) * 100, 100) : 0;
+            const remaining = Math.max(goal.valor_meta - goal.valor_gasto, 0);
+            
+            let statusClass = 'success';
+            let statusIcon = '✅';
+            
+            if (percentage >= 100) {
+                statusClass = 'danger';
+                statusIcon = '🚨';
+            } else if (percentage >= 80) {
+                statusClass = 'warning';
+                statusIcon = '⚠️';
+            } else if (percentage >= 50) {
+                statusClass = 'info';
+                statusIcon = '💡';
+            }
+
+            const tipoIcon = goal.tipo === 'limite_maximo' ? '🚫' : '💰';
+            const tipoLabel = goal.tipo === 'limite_maximo' ? 'Limite Máximo' : 'Meta de Economia';
+
+            html += `
+                <div class="goal-card ${statusClass}">
+                    <div class="goal-header">
+                        <h4>${tipoIcon} ${goal.categoria}</h4>
+                        <button class="btn-small btn-danger" onclick="app.removeGoalById('${goal.id}')" title="Remover meta">🗑️</button>
+                    </div>
+                    <div class="goal-type">${tipoLabel}</div>
+                    <div class="goal-values">
+                        <span class="current">${this.formatCurrency(goal.valor_gasto)}</span>
+                        <span class="separator">/</span>
+                        <span class="target">${this.formatCurrency(goal.valor_meta)}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${statusClass}" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="goal-info">
+                        <span class="percentage">${statusIcon} ${percentage.toFixed(0)}%</span>
+                        <span class="remaining">${goal.tipo === 'limite_maximo' ? 'Restam' : 'Faltam'}: ${this.formatCurrency(remaining)}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        activeGoalsDiv.innerHTML = html;
+    }
+
+    removeGoalById(goalId) {
+        if (!confirm('Tem certeza que deseja remover esta meta?')) return;
+        
+        const goalKey = this.getGoalKey();
+        if (!this.data.goals[goalKey]) return;
+
+        this.data.goals[goalKey] = this.data.goals[goalKey].filter(g => g.id !== goalId);
+        this.saveData();
+        this.updateGoalsDashboard();
+        this.showNotification('Meta removida!', 'success');
     }
 
     updateAdvancedDashboard() {
@@ -1314,19 +1554,22 @@ class AdvancedFinancialApp {
         const metaProgress = document.getElementById('metaProgress');
         const metaSubtitle = document.getElementById('metaSubtitle');
         
-        if (!this.data.goals || this.data.goals.length === 0) {
+        const goalKey = this.getGoalKey();
+        const goals = this.data.goals[goalKey] || [];
+        
+        if (goals.length === 0) {
             metaProgress.textContent = '0%';
-            metaSubtitle.textContent = 'Sem metas definidas';
+            metaSubtitle.textContent = 'Sem metas definidas para este mês';
             metaProgress.className = 'dashboard-value';
             return;
         }
 
-        // Calculate overall progress from all active goals
-        const activeGoals = this.data.goals.filter(g => g.active);
+        // Calculate overall progress from all active goals in current month
+        const activeGoals = goals.filter(g => g.status === 'ativo');
         
         if (activeGoals.length === 0) {
             metaProgress.textContent = '0%';
-            metaSubtitle.textContent = 'Sem metas ativas';
+            metaSubtitle.textContent = 'Sem metas ativas este mês';
             metaProgress.className = 'dashboard-value';
             return;
         }
@@ -1335,12 +1578,12 @@ class AdvancedFinancialApp {
         let exceededGoals = 0;
         
         activeGoals.forEach(goal => {
-            const progress = this.calculateGoalProgress(goal);
-            totalProgress += progress.percentage;
-            if (progress.percentage >= 100) exceededGoals++;
+            const percentage = goal.valor_meta > 0 ? (goal.valor_gasto / goal.valor_meta) * 100 : 0;
+            totalProgress += percentage;
+            if (percentage >= 100) exceededGoals++;
         });
 
-        const avgProgress = totalProgress / activeGoals.length;
+        const avgProgress = Math.min(totalProgress / activeGoals.length, 100);
         
         metaProgress.textContent = `${avgProgress.toFixed(0)}%`;
         
@@ -1349,10 +1592,10 @@ class AdvancedFinancialApp {
             metaSubtitle.textContent = `${exceededGoals} meta(s) excedida(s)`;
         } else if (avgProgress >= 80) {
             metaProgress.className = 'dashboard-value dividas';
-            metaSubtitle.textContent = `${activeGoals.length} meta(s) ativas`;
+            metaSubtitle.textContent = `${activeGoals.length} meta(s) próximas do limite`;
         } else {
             metaProgress.className = 'dashboard-value entradas';
-            metaSubtitle.textContent = `${activeGoals.length} meta(s) ativas`;
+            metaSubtitle.textContent = `${activeGoals.length} meta(s) sob controle`;
         }
     }
 
@@ -1404,143 +1647,63 @@ class AdvancedFinancialApp {
 
     // GOALS SYSTEM METHODS
     addGoal() {
-        const nome = document.getElementById('metaNome').value.trim();
-        const banco = document.getElementById('metaBanco').value;
-        const valorDesejado = parseFloat(document.getElementById('metaValorDesejado').value);
-        const valorAtual = parseFloat(document.getElementById('metaValorAtual').value) || 0;
+        const categoria = document.getElementById('goalCategoria').value;
+        const tipo = document.getElementById('goalTipo').value;
+        const valor = parseFloat(document.getElementById('goalValor').value);
 
-        if (!nome || !banco || !valorDesejado || valorDesejado <= 0) {
+        if (!categoria || !tipo || !valor || valor <= 0) {
             this.showNotification('Preencha todos os campos obrigatórios corretamente.', 'error');
             return;
         }
 
-        if (valorAtual > valorDesejado) {
-            this.showNotification('Valor atual não pode ser maior que o valor desejado.', 'error');
-            return;
+        const success = this.addGoalByCategory(categoria, valor, tipo);
+        
+        if (success) {
+            document.getElementById('goalsForm').reset();
+            this.updateGoalsDashboard();
+        }
+    }
+
+    // Método renomeado da implementação anterior
+    addGoalByCategory(categoria, valorMeta, tipo = 'limite_maximo') {
+        const goalKey = this.getGoalKey();
+        
+        if (!this.data.goals[goalKey]) {
+            this.data.goals[goalKey] = [];
+        }
+
+        // Verificar se já existe meta para esta categoria no mês
+        const existingGoal = this.data.goals[goalKey].find(g => g.categoria === categoria);
+        if (existingGoal) {
+            this.showNotification(`Já existe uma meta para ${categoria} este mês!`, 'warning');
+            return false;
         }
 
         const goal = {
-            id: Date.now().toString(),
-            nome: nome,
-            banco: banco,
-            valorDesejado: valorDesejado,
-            valorAtual: valorAtual,
-            createdAt: new Date().toISOString(),
-            active: true
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            categoria: categoria,
+            tipo: tipo, // limite_maximo, economia_minima, meta_entrada
+            valor_meta: this.parseDecimal(valorMeta),
+            valor_gasto: 0, // calculado automaticamente
+            status: 'ativo',
+            criado_em: new Date().toISOString().split('T')[0],
+            alertas: {
+                '50_porcento': false,
+                '80_porcento': false,
+                '100_porcento': false
+            }
         };
 
-        this.data.goals.push(goal);
+        this.data.goals[goalKey].push(goal);
         this.saveData();
-        this.updateGoalsDisplay();
-        this.updateMetasCard();
-        this.updateDashboard(); // Update main dashboard to reflect reserved amounts
-        
-        document.getElementById('goalsForm').reset();
-        this.showNotification('Meta adicionada com sucesso!', 'success');
+        this.updateGoalsProgress();
+        this.showNotification(`✅ Meta de ${categoria} adicionada com sucesso!`, 'success');
+        return true;
     }
 
-    removeGoal(goalId) {
-        if (!confirm('Tem certeza que deseja remover esta meta?')) return; 
-        
-        this.data.goals = this.data.goals.filter(goal => goal.id !== goalId);
-        this.saveData();
-        this.updateGoalsDisplay();
-        this.updateMetasCard();
-        this.updateDashboard(); // Update main dashboard
-        
-        this.showNotification('Meta removida!', 'warning');
-    }
 
-    updateGoalProgress(goalId, newValorAtual) {
-        const goal = this.data.goals.find(g => g.id === goalId);
-        if (goal) {
-            goal.valorAtual = parseFloat(newValorAtual);
-            this.saveData();
-            this.updateGoalsDisplay();
-            this.updateMetasCard();
-            this.updateDashboard();
-        }
-    }
 
-    updateGoalsDisplay() {
-        const container = document.getElementById('activeGoals');
-        
-        if (!this.data.goals || this.data.goals.length === 0) {
-            container.innerHTML = '<p class="text-muted">Nenhuma meta definida</p>';
-            return;
-        }
 
-        container.innerHTML = '';
-        
-        this.data.goals.forEach(goal => {
-            if (!goal.active) return;
-            
-            const progressPercent = (goal.valorAtual / goal.valorDesejado) * 100;
-            const remaining = goal.valorDesejado - goal.valorAtual;
-            const progressClass = progressPercent >= 100 ? 'success' : progressPercent >= 80 ? 'warning' : '';
-            
-            const goalCard = document.createElement('div');
-            goalCard.className = 'goal-card';
-            
-            const bancoInfo = this.data.banks.find(b => b.id === goal.banco);
-            const bancoNome = bancoInfo ? bancoInfo.name : goal.banco;
-            
-            goalCard.innerHTML = `
-                <div class="goal-info">
-                    <h4>🎯 ${goal.nome}</h4>
-                    <p>${bancoNome} | Meta: ${this.formatCurrency(goal.valorDesejado)} | Falta: ${this.formatCurrency(remaining)}</p>
-                </div>
-                <div class="goal-progress">
-                    <div class="goal-progress-bar">
-                        <div class="goal-progress-fill ${progressClass}" style="width: ${Math.min(progressPercent, 100)}%"></div>
-                    </div>
-                    <div class="goal-status ${progressClass ? 'text-' + (progressClass === 'success' ? 'success' : 'warning') : 'text-muted'}">
-                        ${progressPercent.toFixed(0)}%
-                    </div>
-                </div>
-                <div class="goal-actions">
-                    <input type="number" style="width: 100px; margin-right: 8px;" step="0.01" value="${goal.valorAtual}" onchange="app.updateGoalProgress('${goal.id}', this.value)" placeholder="Valor atual">
-                    <button class="btn btn-sm btn-danger" onclick="app.removeGoal('${goal.id}')">🗑️</button>
-                </div>
-            `;
-            
-            container.appendChild(goalCard);
-        });
-    }
-
-    calculateGoalProgress(goal) {
-        const now = new Date();
-        let startDate, endDate;
-        
-        if (goal.periodo === 'mensal') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        } else { // anual
-            startDate = new Date(now.getFullYear(), 0, 1);
-            endDate = new Date(now.getFullYear(), 11, 31);
-        }
-
-        const relevantTransactions = this.getTransactionsInPeriod(startDate, endDate)
-            .filter(t => t.tipo === 'Saída');
-
-        let spent = 0;
-
-        if (goal.tipo === 'global') {
-            spent = relevantTransactions.reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
-        } else if (goal.tipo === 'categoria') {
-            spent = relevantTransactions
-                .filter(t => t.categoria === goal.categoria)
-                .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
-        } else if (goal.tipo === 'pessoa') {
-            spent = relevantTransactions
-                .filter(t => t.gastoPara === goal.pessoa)
-                .reduce((sum, t) => sum + this.parseDecimal(t.valor), 0);
-        }
-
-        const percentage = (spent / goal.valor) * 100;
-        
-        return { spent, percentage };
-    }
 
     getTransactionsInPeriod(startDate, endDate) {
         const allTransactions = [];
