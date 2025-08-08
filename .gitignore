@@ -27,6 +27,7 @@ build/
 .parcel-cache/
 
 # Specific files to ignore as requested by user
-claude.md
+.claude.md
 index.html
-package-lock.json
+.package-lock.json
+.gemini.md
